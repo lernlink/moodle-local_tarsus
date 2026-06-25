@@ -47,7 +47,7 @@ final class status_test extends \advanced_testcase {
     public function test_illegal_transitions_rejected(): void {
         $this->assertFalse(status::can_transition(status::NOT_INDEXED, status::INDEXED));
         $this->assertFalse(status::can_transition(status::INDEXED, status::PENDING));
-        $this->assertFalse(status::can_transition(status::PENDING_DELETION, status::INDEXED));
+        $this->assertFalse(status::can_transition(status::PENDING_DELETION, status::PENDING));
     }
 
     /**

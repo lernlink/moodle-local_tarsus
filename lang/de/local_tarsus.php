@@ -56,6 +56,10 @@ $string['blocked_breaker'] = 'Ausgehender Aufruf blockiert: Der Schutzschalter i
 $string['blocked_budget'] = 'Ausgehender Aufruf blockiert: Das Credit-Budget ist aufgebraucht.';
 $string['blocked_ratelimit'] = 'Ausgehender Aufruf blockiert: Die Ratenbegrenzung wurde erreicht.';
 
+// Geplante Aufgaben.
+$string['task:processqueue'] = 'Tarsus-Indexierungswarteschlange verarbeiten';
+$string['task:reconcile'] = 'Tarsus-Indexstatus abgleichen';
+
 // Bezeichnungen für den Indexierungsstatus.
 $string['status:notindexed'] = 'Nicht indexiert';
 $string['status:pending'] = 'Ausstehend';

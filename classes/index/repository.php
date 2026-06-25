@@ -214,6 +214,17 @@ class repository {
     }
 
     /**
+     * All rows in a given status, irrespective of retry schedule.
+     *
+     * @param string $status The status to list.
+     * @return \stdClass[] Matching rows.
+     */
+    public function get_by_status(string $status): array {
+        global $DB;
+        return $DB->get_records(self::TABLE, ['status' => $status]);
+    }
+
+    /**
      * Delete a row (e.g. after the source module is gone and bits untracked).
      *
      * @param string $resourceid Namespaced resource id.
