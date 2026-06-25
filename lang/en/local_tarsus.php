@@ -56,6 +56,15 @@ $string['blocked_breaker'] = 'Outbound call blocked: the circuit breaker is open
 $string['blocked_budget'] = 'Outbound call blocked: the credit budget is exhausted.';
 $string['blocked_ratelimit'] = 'Outbound call blocked: the rate limit was reached.';
 
+// Indexation status labels.
+$string['status:notindexed'] = 'Not indexed';
+$string['status:pending'] = 'Pending';
+$string['status:pendingconfirmation'] = 'Awaiting confirmation';
+$string['status:indexed'] = 'Indexed';
+$string['status:pendingreindex'] = 'Re-indexing';
+$string['status:pendingdeletion'] = 'Pending removal';
+$string['status:error'] = 'Error';
+
 // Privacy.
 $string['privacy:metadata:local_tarsus_usage'] = 'Local ledger of Tarsus operations for usage attribution.';
 $string['privacy:metadata:local_tarsus_usage:contextid'] = 'The context in which the operation occurred.';

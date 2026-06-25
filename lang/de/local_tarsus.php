@@ -56,6 +56,15 @@ $string['blocked_breaker'] = 'Ausgehender Aufruf blockiert: Der Schutzschalter i
 $string['blocked_budget'] = 'Ausgehender Aufruf blockiert: Das Credit-Budget ist aufgebraucht.';
 $string['blocked_ratelimit'] = 'Ausgehender Aufruf blockiert: Die Ratenbegrenzung wurde erreicht.';
 
+// Bezeichnungen für den Indexierungsstatus.
+$string['status:notindexed'] = 'Nicht indexiert';
+$string['status:pending'] = 'Ausstehend';
+$string['status:pendingconfirmation'] = 'Warten auf Bestätigung';
+$string['status:indexed'] = 'Indexiert';
+$string['status:pendingreindex'] = 'Neuindexierung';
+$string['status:pendingdeletion'] = 'Entfernung ausstehend';
+$string['status:error'] = 'Fehler';
+
 // Datenschutz.
 $string['privacy:metadata:local_tarsus_usage'] = 'Lokales Protokoll der Tarsus-Vorgänge zur Nutzungszuordnung.';
 $string['privacy:metadata:local_tarsus_usage:contextid'] = 'Der Kontext, in dem der Vorgang stattfand.';
