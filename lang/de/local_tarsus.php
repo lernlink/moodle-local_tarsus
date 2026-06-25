@@ -50,6 +50,11 @@ $string['creditbudget_desc'] = 'Maximale aiCredits pro Zeitraum, bevor Aufrufe a
 
 // Fehler.
 $string['transporterror'] = 'Tarsus-Übertragungsfehler (HTTP {$a}).';
+$string['lockfailed'] = 'Die Sperre für den Schutzmechanismus-Status konnte nicht erlangt werden.';
+$string['blocked_killswitch'] = 'Ausgehender Aufruf blockiert: Der Not-Aus ist aktiviert.';
+$string['blocked_breaker'] = 'Ausgehender Aufruf blockiert: Der Schutzschalter ist offen.';
+$string['blocked_budget'] = 'Ausgehender Aufruf blockiert: Das Credit-Budget ist aufgebraucht.';
+$string['blocked_ratelimit'] = 'Ausgehender Aufruf blockiert: Die Ratenbegrenzung wurde erreicht.';
 
 // Datenschutz.
 $string['privacy:metadata:local_tarsus_usage'] = 'Lokales Protokoll der Tarsus-Vorgänge zur Nutzungszuordnung.';

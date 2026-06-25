@@ -50,6 +50,11 @@ $string['creditbudget_desc'] = 'Maximum aiCredits spent per period before calls 
 
 // Errors.
 $string['transporterror'] = 'Tarsus transport error (HTTP {$a}).';
+$string['lockfailed'] = 'Could not acquire the guardrail state lock.';
+$string['blocked_killswitch'] = 'Outbound call blocked: the kill switch is engaged.';
+$string['blocked_breaker'] = 'Outbound call blocked: the circuit breaker is open.';
+$string['blocked_budget'] = 'Outbound call blocked: the credit budget is exhausted.';
+$string['blocked_ratelimit'] = 'Outbound call blocked: the rate limit was reached.';
 
 // Privacy.
 $string['privacy:metadata:local_tarsus_usage'] = 'Local ledger of Tarsus operations for usage attribution.';
