@@ -84,4 +84,40 @@ final class observer_test extends \advanced_testcase {
         $this->assertTrue($refs->has_references($resourceid));
         $this->assertSame(status::INDEXED, $repo->get($resourceid)->status);
     }
+
+    /**
+     * Updating a tracked module queues it for re-indexing.
+     *
+     * @return void
+     */
+    public function test_module_update_triggers_reindex(): void {
+        global $DB;
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id,
+            'content' => '<p>Original</p>',
+            'contentformat' => FORMAT_HTML,
+        ]);
+        $cm = get_fast_modinfo($course->id)->get_cm($page->cmid);
+
+        // Track and index the page, then mutate its body.
+        $resourceid = (new \local_tarsus\indexer())->index_cm($cm)[0];
+        (new repository())->mark_indexed($resourceid, 'bit-1', 'stale');
+        $DB->set_field('page', 'content', '<p>Edited</p>', ['id' => $page->id]);
+
+        $event = \core\event\course_module_updated::create([
+            'objectid' => $cm->id,
+            'context' => \context_module::instance($cm->id),
+            'other' => [
+                'modulename' => 'page',
+                'instanceid' => $cm->instance,
+                'name' => $cm->name,
+            ],
+        ]);
+        $event->trigger();
+
+        $this->assertSame(status::PENDING_REINDEX, (new repository())->get($resourceid)->status);
+    }
 }

@@ -17,6 +17,7 @@
 namespace local_tarsus;
 
 use core\event\course_module_deleted;
+use core\event\course_module_updated;
 use local_tarsus\index\reference_store;
 use local_tarsus\index\repository;
 use local_tarsus\index\status;
@@ -62,5 +63,29 @@ class observer {
                 $repo->set_status($resourceid, status::PENDING_DELETION);
             }
         }
+    }
+
+    /**
+     * Re-index already-tracked bits when a module is updated.
+     *
+     * Only content the teacher has already chosen to index is refreshed;
+     * untracked material is never auto-tracked from an edit.
+     *
+     * @param course_module_updated $event The triggered event.
+     * @return void
+     */
+    public static function course_module_updated(course_module_updated $event): void {
+        $cm = get_coursemodule_from_id('', (int) $event->objectid, 0, false, IGNORE_MISSING);
+        if (!$cm) {
+            return;
+        }
+
+        try {
+            $cminfo = get_fast_modinfo($cm->course)->get_cm($cm->id);
+        } catch (\moodle_exception $e) {
+            return;
+        }
+
+        (new indexer())->refresh_cm($cminfo);
     }
 }

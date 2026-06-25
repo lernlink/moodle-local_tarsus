@@ -56,13 +56,57 @@ class indexer {
     /**
      * Resolve a course module and queue any new or changed bits for indexing.
      *
+     * Opt-in path (teacher action / bulk): tracks materials that are not yet
+     * tracked, and re-indexes those whose content changed.
+     *
      * @param \cm_info $cm The course module to index.
      * @return string[] The resource ids that were queued (new or re-index).
      */
     public function index_cm(\cm_info $cm): array {
+        return $this->run($cm, false);
+    }
+
+    /**
+     * Index every supported activity in a course (opt-in bulk action).
+     *
+     * @param int $courseid The course id.
+     * @return string[] All resource ids queued across the course.
+     */
+    public function index_course(int $courseid): array {
+        $queued = [];
+        foreach (get_fast_modinfo($courseid)->get_cms() as $cm) {
+            if (!empty($cm->deletioninprogress) || !$this->resolver->supports($cm->modname)) {
+                continue;
+            }
+            $queued = array_merge($queued, $this->index_cm($cm));
+        }
+        return $queued;
+    }
+
+    /**
+     * Re-evaluate only the already-tracked bits of a course module.
+     *
+     * Event-driven path (module updated): refreshes content the teacher has
+     * already chosen to index, but never auto-tracks new material.
+     *
+     * @param \cm_info $cm The course module to refresh.
+     * @return string[] The resource ids queued for re-indexing.
+     */
+    public function refresh_cm(\cm_info $cm): array {
+        return $this->run($cm, true);
+    }
+
+    /**
+     * Resolve a module and decide each material.
+     *
+     * @param \cm_info $cm          The course module.
+     * @param bool     $onlytracked When true, ignore materials with no index row.
+     * @return string[] The resource ids that were queued.
+     */
+    private function run(\cm_info $cm, bool $onlytracked): array {
         $queued = [];
         foreach ($this->resolver->resolve($cm) as $material) {
-            if ($this->index_material($material)) {
+            if ($this->index_material($material, $onlytracked)) {
                 $queued[] = $material->resourceid;
             }
         }
@@ -72,14 +116,19 @@ class indexer {
     /**
      * Decide and queue a single material.
      *
-     * @param material $material The extracted material.
+     * @param material $material    The extracted material.
+     * @param bool     $onlytracked When true, skip materials that have no row yet.
      * @return bool True when an indexation call was queued.
      */
-    private function index_material(material $material): bool {
+    private function index_material(material $material, bool $onlytracked = false): bool {
         $resourceid = $material->resourceid;
-        $hash = $material->content_hash();
+        $existing = $this->repo->get($resourceid);
 
-        $row = $this->repo->ensure(
+        if ($onlytracked && $existing === null) {
+            return false; // Not chosen for indexing: a refresh must not track it.
+        }
+
+        $row = $existing ?? $this->repo->ensure(
             $resourceid,
             $material->contextid,
             $material->component,
@@ -90,7 +139,7 @@ class indexer {
         // deletion will not untrack content we still need.
         $this->refs->add($resourceid, $material->component, $material->cmid, $material->contextid);
 
-        $target = $this->target_status($row, $hash);
+        $target = $this->target_status($row, $material->content_hash());
         if ($target === null) {
             return false; // Unchanged, or already in flight: no API call.
         }

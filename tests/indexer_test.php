@@ -112,4 +112,55 @@ final class indexer_test extends \advanced_testcase {
         $this->assertSame([$resourceid], $queued);
         $this->assertSame(status::PENDING_REINDEX, (new repository())->get($resourceid)->status);
     }
+
+    /**
+     * Bulk course indexing queues every supported activity.
+     *
+     * @return void
+     */
+    public function test_index_course_covers_supported_modules(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->make_page($course->id, '<p>Epsilon</p>');
+        $this->getDataGenerator()->create_module('url', [
+            'course' => $course->id,
+            'externalurl' => 'https://example.org/zeta',
+        ]);
+        // An unsupported module must be ignored.
+        $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+
+        $queued = (new indexer())->index_course($course->id);
+
+        $this->assertCount(2, $queued);
+        foreach ($queued as $resourceid) {
+            $this->assertSame(status::PENDING, (new repository())->get($resourceid)->status);
+        }
+    }
+
+    /**
+     * refresh_cm re-indexes tracked content but never tracks new material.
+     *
+     * @return void
+     */
+    public function test_refresh_only_touches_tracked(): void {
+        global $DB;
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $cm = $this->make_page($course->id, '<p>Eta</p>');
+
+        // Untracked module: refresh is a no-op, nothing is created.
+        $this->assertSame([], (new indexer())->refresh_cm($cm));
+        $resourceid = \local_tarsus\material\resource_id::build($course->id, 'mod_page', $cm->id);
+        $this->assertNull((new repository())->get($resourceid));
+
+        // Track it, mark indexed, change content, then refresh.
+        (new indexer())->index_cm($cm);
+        (new repository())->mark_indexed($resourceid, 'bit-1', 'stale');
+        $DB->set_field('page', 'content', '<p>Theta changed</p>', ['id' => $cm->instance]);
+
+        $this->assertSame([$resourceid], (new indexer())->refresh_cm($cm));
+        $this->assertSame(status::PENDING_REINDEX, (new repository())->get($resourceid)->status);
+    }
 }

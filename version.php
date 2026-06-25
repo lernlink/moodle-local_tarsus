@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026062503;
+$plugin->version   = 2026062504;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '0.3.0 (Phase 0 material extraction + hashing)';
+$plugin->release   = '0.4.0 (Phase 0 bulk course indexing + update observer)';
