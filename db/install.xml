@@ -64,5 +64,22 @@
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
       </INDEXES>
     </TABLE>
+    <TABLE NAME="local_tarsus_resource_ref" COMMENT="Reference map: which Moodle owners (activities) reference a namespaced resource_id, enabling the shared-brain untrack reference-count check.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="resourceid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="ownercomponent" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false" COMMENT="Frankenstyle component of the referencing owner, e.g. mod_tarsuszero."/>
+        <FIELD NAME="owneritemid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Owner item id, e.g. course module id."/>
+        <FIELD NAME="ownercontextid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="resourceid" UNIQUE="false" FIELDS="resourceid"/>
+        <INDEX NAME="owner" UNIQUE="false" FIELDS="ownercomponent, owneritemid"/>
+      </INDEXES>
+    </TABLE>
   </TABLES>
 </XMLDB>

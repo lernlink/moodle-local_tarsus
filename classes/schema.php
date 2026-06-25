@@ -39,6 +39,7 @@ class schema {
         'local_tarsus_index',
         'local_tarsus_guardrail',
         'local_tarsus_usage',
+        'local_tarsus_resource_ref',
     ];
 
     /**
@@ -70,6 +71,7 @@ class schema {
             self::index_table(),
             self::guardrail_table(),
             self::usage_table(),
+            self::reference_table(),
         ];
     }
 
@@ -146,6 +148,33 @@ class schema {
         $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
         $table->add_index('contextid', XMLDB_INDEX_NOTUNIQUE, ['contextid']);
         $table->add_index('userid', XMLDB_INDEX_NOTUNIQUE, ['userid']);
+
+        return $table;
+    }
+
+    /**
+     * Reference map: which Moodle owners (activities) reference a resource_id.
+     *
+     * The shared brain is scoped at course level, so one namespaced resource_id
+     * can be referenced by several activities. This table makes the untrack
+     * reference-count check possible: a resource is only removed from the brain
+     * when no live owner references it.
+     *
+     * @return xmldb_table
+     */
+    private static function reference_table(): xmldb_table {
+        $table = new xmldb_table('local_tarsus_resource_ref');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('resourceid', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('ownercomponent', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('owneritemid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('ownercontextid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('resourceid', XMLDB_INDEX_NOTUNIQUE, ['resourceid']);
+        $table->add_index('owner', XMLDB_INDEX_NOTUNIQUE, ['ownercomponent', 'owneritemid']);
 
         return $table;
     }
