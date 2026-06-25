@@ -24,6 +24,7 @@ use local_tarsus\guardrail\pipeline;
 use local_tarsus\index\repository;
 use local_tarsus\index\reference_store;
 use local_tarsus\index\status;
+use local_tarsus\material\resolver;
 
 /**
  * Orchestrates one unit of indexation work against the brain.
@@ -50,6 +51,7 @@ class tracker {
      * @param reference_store|null $refs     Resource reference store.
      * @param pipeline|null        $pipeline Guardrails pipeline.
      * @param usage_meter|null     $usage    Usage ledger.
+     * @param resolver|null        $resolver Material resolver (re-extracts payloads at send time).
      * @param client_interface|null $client  Tarsus client (defaults to the configured one).
      */
     public function __construct(
@@ -57,12 +59,14 @@ class tracker {
         private ?reference_store $refs = null,
         private ?pipeline $pipeline = null,
         private ?usage_meter $usage = null,
+        private ?resolver $resolver = null,
         ?client_interface $client = null
     ) {
         $this->repo ??= new repository();
         $this->refs ??= new reference_store();
         $this->pipeline ??= new pipeline();
         $this->usage ??= new usage_meter();
+        $this->resolver ??= new resolver();
         $this->client = $client ?? client_factory::get_client();
     }
 
@@ -91,12 +95,16 @@ class tracker {
      * @return void
      */
     private function process_upload(\stdClass $row): void {
+        // Re-extract from current state: cron may run long after the trigger.
+        $material = $this->resolver->resolve_by_resource_id($row->resourceid);
+        $payload = $material
+            ? $material->to_payload()
+            : ['resource_id' => $row->resourceid, 'context_id' => (string) $row->contextid];
+        $hash = $material ? $material->content_hash() : ($row->contenthash ?: sha1($row->resourceid));
+
         try {
             $result = $this->pipeline->execute(
-                fn() => $this->client->track_resource([
-                    'resource_id' => $row->resourceid,
-                    'contextid' => (int) $row->contextid,
-                ])
+                fn() => $this->client->track_resource($payload)
             );
         } catch (blocked_exception $e) {
             return; // Guardrail held the call; retry on a later run.
@@ -107,7 +115,6 @@ class tracker {
 
         $this->usage->record((int) $row->contextid, 0, 'track', (int) ($result['credits'] ?? 0));
 
-        $hash = $row->contenthash ?: sha1($row->resourceid);
         $bitref = (string) ($result['bitref'] ?? '');
 
         if (($result['status'] ?? '') === status::INDEXED) {
@@ -137,7 +144,8 @@ class tracker {
         }
 
         if (($result['status'] ?? '') === status::INDEXED) {
-            $hash = $row->contenthash ?: sha1($row->resourceid);
+            $material = $this->resolver->resolve_by_resource_id($row->resourceid);
+            $hash = $material ? $material->content_hash() : ($row->contenthash ?: sha1($row->resourceid));
             $bitref = (string) ($result['bitref'] ?? $row->bitref ?? '');
             $this->repo->mark_indexed($row->resourceid, $bitref, $hash);
         } else {
