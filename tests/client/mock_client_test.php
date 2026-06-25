@@ -1,0 +1,96 @@
+<?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+
+namespace local_tarsus\client;
+
+/**
+ * Tests for the deterministic mock client and the client factory.
+ *
+ * @package    local_tarsus
+ * @covers     \local_tarsus\client\mock_client
+ * @covers     \local_tarsus\client\client_factory
+ * @copyright  2026 lern.link GmbH
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+final class mock_client_test extends \advanced_testcase {
+
+    /**
+     * Grounded search returns a deterministic answer with sources.
+     *
+     * @return void
+     */
+    public function test_search_grounded_returns_sources(): void {
+        $client = new mock_client();
+        $result = $client->search_grounded('site:1:course:2', 'What is photosynthesis?');
+
+        $this->assertArrayHasKey('answer', $result);
+        $this->assertArrayHasKey('sources', $result);
+        $this->assertNotEmpty($result['sources']);
+    }
+
+    /**
+     * Async track yields pending-confirmation; sync track yields indexed.
+     *
+     * @return void
+     */
+    public function test_track_resource_sync_and_async(): void {
+        $async = new mock_client(true);
+        $this->assertSame('pending-confirmation', $async->track_resource(['resource_id' => 'r1'])['status']);
+
+        $sync = new mock_client(false);
+        $this->assertSame('indexed', $sync->track_resource(['resource_id' => 'r1'])['status']);
+    }
+
+    /**
+     * A configured failure status raises a transport_exception carrying it.
+     *
+     * @return void
+     */
+    public function test_simulated_failure_raises_transport_exception(): void {
+        $client = new mock_client(true, 429);
+
+        try {
+            $client->search_grounded('site:1:course:2', 'q');
+            $this->fail('Expected transport_exception was not thrown.');
+        } catch (transport_exception $e) {
+            $this->assertSame(429, $e->httpstatus);
+        }
+    }
+
+    /**
+     * The factory returns the mock when mock mode is enabled.
+     *
+     * @return void
+     */
+    public function test_factory_returns_mock_in_mock_mode(): void {
+        $this->resetAfterTest(true);
+        set_config('mockmode', 1, 'local_tarsus');
+
+        $this->assertInstanceOf(mock_client::class, client_factory::get_client());
+    }
+
+    /**
+     * The factory returns the real client skeleton when mock mode is off.
+     *
+     * @return void
+     */
+    public function test_factory_returns_http_client_when_mock_off(): void {
+        $this->resetAfterTest(true);
+        set_config('mockmode', 0, 'local_tarsus');
+
+        $this->assertInstanceOf(http_client::class, client_factory::get_client());
+    }
+}
