@@ -78,9 +78,10 @@ class repository {
             'timecreated' => $now,
             'timemodified' => $now,
         ];
-        $row->id = $DB->insert_record(self::TABLE, $row);
+        $DB->insert_record(self::TABLE, $row);
 
-        return $row;
+        // Re-fetch so the returned row carries the same DB-typed fields as get().
+        return $this->require_row($resourceid);
     }
 
     /**

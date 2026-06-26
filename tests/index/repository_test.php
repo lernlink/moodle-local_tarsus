@@ -59,9 +59,9 @@ final class repository_test extends \advanced_testcase {
         $repo->set_status(self::RID, status::PENDING);
         $this->assertSame(status::PENDING, $repo->get(self::RID)->status);
 
-        // pending -> pendingdeletion is not a legal transition.
+        // pending -> notindexed is not a legal transition.
         $this->expectException(\coding_exception::class);
-        $repo->set_status(self::RID, status::PENDING_DELETION);
+        $repo->set_status(self::RID, status::NOT_INDEXED);
     }
 
     /**

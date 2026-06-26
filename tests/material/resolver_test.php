@@ -90,6 +90,7 @@ final class resolver_test extends \advanced_testcase {
      */
     public function test_resource_extracts_files(): void {
         $this->resetAfterTest(true);
+        $this->setAdminUser();
 
         $course = $this->getDataGenerator()->create_course();
         $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
