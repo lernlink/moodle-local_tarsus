@@ -95,4 +95,88 @@ final class schema_test extends \advanced_testcase {
             $this->assertTrue($dbman->table_exists($tablename));
         }
     }
+
+    /**
+     * The real db/upgrade.php entry point recreates missing tables.
+     *
+     * Stronger than calling the helper directly: it proves db/upgrade.php is
+     * actually wired to the schema guard, which is what runs in production.
+     *
+     * @return void
+     */
+    public function test_upgrade_entry_point_recreates_tables(): void {
+        global $CFG, $DB;
+
+        $this->resetAfterTest(true);
+        require_once($CFG->dirroot . '/local/tarsus/db/upgrade.php');
+
+        $dbman = $DB->get_manager();
+        $dbman->drop_table(new xmldb_table('local_tarsus_index'));
+        $this->assertFalse($dbman->table_exists('local_tarsus_index'));
+
+        // Invoke the genuine upgrade function as Moodle would.
+        $this->assertTrue(xmldb_local_tarsus_upgrade(2026062505));
+
+        foreach (schema::TABLES as $tablename) {
+            $this->assertTrue(
+                $dbman->table_exists($tablename),
+                "Upgrade entry point did not recreate table {$tablename}."
+            );
+        }
+    }
+
+    /**
+     * The TABLES constant and the code-built definitions cannot drift apart.
+     *
+     * @return void
+     */
+    public function test_table_definitions_match_constant(): void {
+        $defined = array_map(
+            static fn(xmldb_table $table): string => $table->getName(),
+            schema::table_definitions()
+        );
+
+        sort($defined);
+        $expected = schema::TABLES;
+        sort($expected);
+
+        $this->assertSame($expected, $defined);
+    }
+
+    /**
+     * Every field and index of every definition is present in the live schema.
+     *
+     * This is the drift guard between install.xml (which built the test DB) and
+     * the schema class (which db/upgrade.php applies): a column added to one but
+     * not the other fails here.
+     *
+     * @return void
+     */
+    public function test_definition_fields_and_indexes_present(): void {
+        global $DB;
+
+        $dbman = $DB->get_manager();
+
+        foreach (schema::table_definitions() as $table) {
+            $this->assertTrue(
+                $dbman->table_exists($table),
+                "Table {$table->getName()} is absent from the installed schema."
+            );
+
+            foreach ($table->getFields() as $field) {
+                $this->assertTrue(
+                    $dbman->field_exists($table, $field),
+                    "Field {$table->getName()}.{$field->getName()} missing — install.xml and schema drifted."
+                );
+            }
+
+            foreach ($table->getIndexes() as $index) {
+                $this->assertTrue(
+                    $dbman->index_exists($table, $index),
+                    "Index on {$table->getName()} (" . implode(', ', $index->getFields())
+                        . ') missing — install.xml and schema drifted.'
+                );
+            }
+        }
+    }
 }
