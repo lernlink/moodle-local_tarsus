@@ -49,7 +49,7 @@ class course_report {
      * Per-activity indexation status for a course.
      *
      * @param int $courseid The course id.
-     * @return array<int, array{cmid: int, modname: string, name: string, bits: array}>
+     * @return array<int, array{cmid: int, modname: string, name: string, url: ?string, bits: array}>
      *         One entry per supported, indexable activity.
      */
     public function for_course(int $courseid): array {
@@ -68,6 +68,7 @@ class course_report {
                 'cmid' => $cm->id,
                 'modname' => $cm->modname,
                 'name' => $cm->get_formatted_name(),
+                'url' => $cm->url ? $cm->url->out(false) : null,
                 'bits' => $bits,
             ];
         }

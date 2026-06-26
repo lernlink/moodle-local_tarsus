@@ -97,6 +97,90 @@ class indexer {
     }
 
     /**
+     * Index a single material identified by its namespaced resource id.
+     *
+     * Opt-in per-file action: resolves the material afresh, tracks it if new,
+     * and queues an upload when the content is new or changed.
+     *
+     * @param string $resourceid The namespaced resource id.
+     * @return bool True when an indexation call was queued.
+     */
+    public function index_resource(string $resourceid): bool {
+        $material = $this->resolver->resolve_by_resource_id($resourceid);
+        if ($material === null) {
+            return false;
+        }
+        return $this->index_material($material, false);
+    }
+
+    /**
+     * Force a re-index of a single tracked resource (add-before-remove, §5).
+     *
+     * @param string $resourceid The namespaced resource id.
+     * @return bool True when a re-index was queued.
+     */
+    public function reindex_resource(string $resourceid): bool {
+        $row = $this->repo->get($resourceid);
+        if ($row === null) {
+            // Not tracked yet: a re-index request degrades to a first index.
+            return $this->index_resource($resourceid);
+        }
+
+        if ($row->status === status::ERROR) {
+            $this->repo->reset_attempts($resourceid);
+        }
+
+        if (!status::can_transition($row->status, status::PENDING_REINDEX)) {
+            return false; // Already in flight: nothing to do.
+        }
+
+        $this->repo->set_status($resourceid, status::PENDING_REINDEX);
+        process_resource_task::queue($resourceid);
+        return true;
+    }
+
+    /**
+     * Mark a single resource for removal from the brain (shared-brain safe, §5).
+     *
+     * The worker still runs the reference-count check before untracking.
+     *
+     * @param string $resourceid The namespaced resource id.
+     * @return bool True when a deletion was queued.
+     */
+    public function remove_resource(string $resourceid): bool {
+        $row = $this->repo->get($resourceid);
+        if ($row === null) {
+            return false;
+        }
+
+        if (!status::can_transition($row->status, status::PENDING_DELETION)) {
+            return false;
+        }
+
+        $this->repo->set_status($resourceid, status::PENDING_DELETION);
+        process_resource_task::queue($resourceid);
+        return true;
+    }
+
+    /**
+     * Retry a single resource stuck in the error state.
+     *
+     * @param string $resourceid The namespaced resource id.
+     * @return bool True when a retry was queued.
+     */
+    public function retry_resource(string $resourceid): bool {
+        $row = $this->repo->get($resourceid);
+        if ($row === null || $row->status !== status::ERROR) {
+            return false;
+        }
+
+        $this->repo->reset_attempts($resourceid);
+        $this->repo->set_status($resourceid, status::PENDING);
+        process_resource_task::queue($resourceid);
+        return true;
+    }
+
+    /**
      * Resolve a module and decide each material.
      *
      * @param \cm_info $cm          The course module.
