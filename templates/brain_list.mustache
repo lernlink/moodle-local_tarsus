@@ -23,19 +23,23 @@
     Context variables required for this template:
     * hasbrains - bool, whether the API key returned any brain.
     * hascurrent - bool, whether a brain is currently selected.
+    * currentmissing - bool, whether the selected brain is absent from the list.
     * current - string, the currently selected brain id.
     * brains - array of {
-          brainid, language, tag, created, statuslabel, badgeclass,
-          selected, canactivate, activateurl }.
+          brainid, displayname, renamed, language, tag, created, statuslabel,
+          badgeclass, selected, canactivate, activateurl }.
 
     Example context (json):
     {
         "hasbrains": true,
         "hascurrent": true,
+        "currentmissing": false,
         "current": "lernlink-demo",
         "brains": [
             {
                 "brainid": "lernlink-demo",
+                "displayname": "lernlink-demo",
+                "renamed": false,
                 "language": "de",
                 "tag": "default",
                 "created": "1 January 2026, 12:00",
@@ -64,7 +68,12 @@
             <tbody>
                 {{#brains}}
                     <tr>
-                        <th scope="row" class="font-weight-normal">{{brainid}}</th>
+                        <th scope="row" class="font-weight-normal">
+                            {{displayname}}
+                            {{#renamed}}
+                                <div class="text-muted small">{{brainid}}</div>
+                            {{/renamed}}
+                        </th>
                         <td><span class="badge {{badgeclass}}">{{statuslabel}}</span></td>
                         <td>{{language}}</td>
                         <td>{{tag}}</td>
@@ -86,6 +95,9 @@
         {{^hascurrent}}
             <div class="alert alert-warning">{{#str}}brain_none_selected, local_tarsus{{/str}}</div>
         {{/hascurrent}}
+        {{#currentmissing}}
+            <div class="alert alert-danger">{{#str}}brain_missing, local_tarsus, {{current}}{{/str}}</div>
+        {{/currentmissing}}
     {{/hasbrains}}
 
     {{^hasbrains}}

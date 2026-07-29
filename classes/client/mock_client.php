@@ -142,6 +142,13 @@ class mock_client implements client_interface {
                 'tag' => 'default',
                 'timecreated' => 1700000000,
             ],
+            [
+                'brainid' => 'deleted-17cff6a1-4850-4d71-987a-97ceea0e0cba-mock-brain-old',
+                'active' => false,
+                'language' => 'de',
+                'tag' => 'default',
+                'timecreated' => 1690000000,
+            ],
         ];
     }
 

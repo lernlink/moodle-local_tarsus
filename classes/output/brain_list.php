@@ -34,6 +34,9 @@ use templatable;
  */
 class brain_list implements renderable, templatable {
 
+    /** @var string A deleted brain keeps its row, renamed to deleted-<uuid>-<original id>. */
+    private const DELETED_PATTERN = '/^deleted-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}-(.+)$/i';
+
     /**
      * Constructor.
      *
@@ -61,28 +64,76 @@ class brain_list implements renderable, templatable {
     }
 
     /**
+     * Whether this site may be pointed at the given brain.
+     *
+     * @param string $brainid The brain id to check.
+     * @return bool
+     */
+    public function can_activate(string $brainid): bool {
+        foreach ($this->rows() as $row) {
+            if ($row['brainid'] === $brainid) {
+                return $row['canactivate'];
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Export the brain table for the mustache template.
      *
      * @param renderer_base $output The renderer.
      * @return array<string, mixed>
      */
     public function export_for_template(renderer_base $output): array {
+        $rows = $this->rows();
+        $known = in_array($this->current, array_column($rows, 'brainid'), true);
+
+        return [
+            'brains' => $rows,
+            'hasbrains' => $rows !== [],
+            'hascurrent' => $this->current !== '',
+            'currentmissing' => $this->current !== '' && !$known,
+            'current' => $this->current,
+        ];
+    }
+
+    /**
+     * Build one display row per brain.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function rows(): array {
         $rows = [];
 
         foreach ($this->brains as $brain) {
             $brainid = (string) ($brain['brainid'] ?? '');
             $active = !empty($brain['active']);
             $selected = ($brainid !== '' && $brainid === $this->current);
+            $deleted = (bool) preg_match(self::DELETED_PATTERN, $brainid, $matches);
+
+            if ($deleted) {
+                $state = 'deleted';
+                $badge = 'badge-danger';
+            } else if ($active) {
+                $state = 'active';
+                $badge = 'badge-success';
+            } else {
+                $state = 'inactive';
+                $badge = 'badge-secondary';
+            }
 
             $rows[] = [
                 'brainid' => $brainid,
+                'displayname' => $deleted ? $matches[1] : $brainid,
+                'renamed' => $deleted,
                 'language' => (string) ($brain['language'] ?? ''),
                 'tag' => (string) ($brain['tag'] ?? ''),
                 'created' => empty($brain['timecreated']) ? '' : userdate((int) $brain['timecreated']),
-                'statuslabel' => get_string($active ? 'brain_active' : 'brain_inactive', 'local_tarsus'),
-                'badgeclass' => $active ? 'badge-success' : 'badge-secondary',
+                'statuslabel' => get_string('brain_' . $state, 'local_tarsus'),
+                'badgeclass' => $badge,
                 'selected' => $selected,
-                'canactivate' => $active && !$selected,
+                'canactivate' => $active && !$deleted && !$selected,
                 'activateurl' => (new \moodle_url('/local/tarsus/brains.php', [
                     'action' => 'activate',
                     'brainid' => $brainid,
@@ -91,11 +142,6 @@ class brain_list implements renderable, templatable {
             ];
         }
 
-        return [
-            'brains' => $rows,
-            'hasbrains' => $rows !== [],
-            'hascurrent' => $this->current !== '',
-            'current' => $this->current,
-        ];
+        return $rows;
     }
 }

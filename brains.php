@@ -46,15 +46,7 @@ if ($action === 'activate') {
     }
 
     // Only ever point the site at a brain the API key really reports as active.
-    $match = null;
-    foreach ($brains->export_for_template($OUTPUT)['brains'] as $brain) {
-        if ($brain['brainid'] === $brainid && $brain['canactivate']) {
-            $match = $brain;
-            break;
-        }
-    }
-
-    if ($match === null) {
+    if (!$brains->can_activate($brainid)) {
         redirect($pageurl, get_string('brain_activate_failed', 'local_tarsus'), null,
             \core\output\notification::NOTIFY_ERROR);
     }
@@ -69,7 +61,10 @@ echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('brains', 'local_tarsus'));
 
 try {
-    echo $OUTPUT->render_from_template('local_tarsus/brain_list', brain_list::fetch()->export_for_template($OUTPUT));
+    echo $OUTPUT->render_from_template(
+        'local_tarsus/brain_list',
+        brain_list::fetch()->export_for_template($PAGE->get_renderer('core'))
+    );
 } catch (transport_exception | moodle_exception $e) {
     echo $OUTPUT->notification($e->getMessage(), \core\output\notification::NOTIFY_ERROR);
     echo $OUTPUT->single_button(

@@ -324,7 +324,7 @@ class http_client implements client_interface {
      * via CURLOPT_CUSTOMREQUEST while the fields travel in the body.
      *
      * @param string $method    HTTP method.
-     * @param string $path      Path relative to the brain access prefix.
+     * @param string $path      Path relative to the brain API prefix.
      * @param array  $params    Form fields (credentials are added here).
      * @param bool   $uploading Whether the call carries a file.
      * @return array The decoded response body.
@@ -340,10 +340,13 @@ class http_client implements client_interface {
 
         $params['api_key'] = $this->apikey;
 
+        // The brain expects form-data on every verb, including GET and DELETE.
+        // curl::get() would move the fields into the query string and curl::delete()
+        // drops them entirely, so post() carries the body and CURLOPT_CUSTOMREQUEST
+        // relabels the verb, exactly as "curl --request GET --form" does.
         $curl = new \curl();
-        $response = $curl->request($baseurl . self::API_PREFIX . $path, [
+        $response = $curl->post($baseurl . self::API_PREFIX . $path, $params, [
             'CURLOPT_CUSTOMREQUEST' => $method,
-            'CURLOPT_POSTFIELDS' => $params,
             'CURLOPT_RETURNTRANSFER' => 1,
             'CURLOPT_FOLLOWLOCATION' => 0,
             'CURLOPT_CONNECTTIMEOUT' => self::CONNECT_TIMEOUT,

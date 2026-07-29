@@ -47,12 +47,14 @@ $string['brain_col_created'] = 'Created';
 $string['brain_col_action'] = 'Action';
 $string['brain_active'] = 'Active';
 $string['brain_inactive'] = 'Inactive';
+$string['brain_deleted'] = 'Deleted';
 $string['brain_inuse'] = 'In use';
 $string['brain_activate'] = 'Activate';
 $string['brain_activated'] = 'This site now uses brain "{$a}".';
 $string['brain_activate_failed'] = 'That brain cannot be activated: it is unknown to this API key or no longer active.';
 $string['brain_none_found'] = 'The API key returned no brains. Check the base URL and API key, or ask Tarsus to activate the key.';
 $string['brain_none_selected'] = 'No brain is selected yet. Indexing and chat stay blocked until you activate one.';
+$string['brain_missing'] = 'This site is configured to use brain "{$a}", but the API key no longer reports it. It was most likely deleted. Activate an existing brain below.';
 $string['brain_gotosettings'] = 'Back to Tarsus settings';
 $string['nobrainselected'] = 'No Tarsus brain is selected. Pick one in the Tarsus brains page.';
 
