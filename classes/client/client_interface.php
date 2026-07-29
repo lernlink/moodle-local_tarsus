@@ -81,6 +81,16 @@ interface client_interface {
     public function check_tracked_resources(array $resourceids): array;
 
     /**
+     * List every brain the configured API key can reach.
+     *
+     * Deliberately not scoped to the configured brain: an admin must be able to
+     * discover the available brains before choosing one.
+     *
+     * @return array<int, array{brainid: string, active: bool, language: string, tag: string, timecreated: int}>
+     */
+    public function list_brains(): array;
+
+    /**
      * Generate learning widgets (tests / stacks). Phase 2.
      *
      * @param string $contextid Namespaced context.

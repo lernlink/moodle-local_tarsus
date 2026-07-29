@@ -31,6 +31,12 @@ if ($hassiteconfig) {
     $settings = new admin_settingpage('local_tarsus', get_string('pluginname', 'local_tarsus'));
     $ADMIN->add('localplugins', $settings);
 
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_tarsus_brains',
+        get_string('brains', 'local_tarsus'),
+        new moodle_url('/local/tarsus/brains.php')
+    ));
+
     $settings->add(new admin_setting_heading(
         'local_tarsus/connection',
         get_string('settings_connection', 'local_tarsus'),
@@ -58,6 +64,12 @@ if ($hassiteconfig) {
         get_string('baseurl_desc', 'local_tarsus'),
         '',
         PARAM_URL
+    ));
+
+    $settings->add(new admin_setting_description(
+        'local_tarsus/brainpicker',
+        get_string('brains', 'local_tarsus'),
+        get_string('brains_desc', 'local_tarsus', (new moodle_url('/local/tarsus/brains.php'))->out())
     ));
 
     $settings->add(new admin_setting_heading(

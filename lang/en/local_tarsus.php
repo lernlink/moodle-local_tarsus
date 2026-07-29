@@ -34,7 +34,27 @@ $string['apikey_desc'] = 'The Tarsus API key. Stored site-wide and never sent to
 $string['brainid'] = 'Brain ID';
 $string['brainid_desc'] = 'The single Tarsus brain used by this site.';
 $string['baseurl'] = 'Base URL';
-$string['baseurl_desc'] = 'The Tarsus API base URL (data residency: Germany).';
+$string['baseurl_desc'] = 'The Tarsus API base URL (data residency: Germany). Enter only the host, without the /api/v1/... path.';
+
+// Brain picker.
+$string['brains'] = 'Tarsus brains';
+$string['brains_desc'] = 'Every brain reachable by the API key above, with its state. <a href="{$a}">Open the brain list</a> to pick the one this site uses.';
+$string['brain_col_id'] = 'Brain ID';
+$string['brain_col_status'] = 'State';
+$string['brain_col_language'] = 'Language';
+$string['brain_col_tag'] = 'Tag';
+$string['brain_col_created'] = 'Created';
+$string['brain_col_action'] = 'Action';
+$string['brain_active'] = 'Active';
+$string['brain_inactive'] = 'Inactive';
+$string['brain_inuse'] = 'In use';
+$string['brain_activate'] = 'Activate';
+$string['brain_activated'] = 'This site now uses brain "{$a}".';
+$string['brain_activate_failed'] = 'That brain cannot be activated: it is unknown to this API key or no longer active.';
+$string['brain_none_found'] = 'The API key returned no brains. Check the base URL and API key, or ask Tarsus to activate the key.';
+$string['brain_none_selected'] = 'No brain is selected yet. Indexing and chat stay blocked until you activate one.';
+$string['brain_gotosettings'] = 'Back to Tarsus settings';
+$string['nobrainselected'] = 'No Tarsus brain is selected. Pick one in the Tarsus brains page.';
 
 // Guardrail settings.
 $string['settings_guardrails'] = 'Guardrails';

@@ -124,6 +124,28 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function list_brains(): array {
+        $this->maybe_fail();
+
+        return [
+            [
+                'brainid' => 'mock-brain-default',
+                'active' => true,
+                'language' => 'de',
+                'tag' => 'default',
+                'timecreated' => 1726722755,
+            ],
+            [
+                'brainid' => 'mock-brain-retired',
+                'active' => false,
+                'language' => 'en',
+                'tag' => 'default',
+                'timecreated' => 1700000000,
+            ],
+        ];
+    }
+
+    #[\Override]
     public function generate_widgets(string $contextid, array $params): array {
         // Phase 2.
         throw new \coding_exception('generate_widgets is not implemented in Phase 1.');

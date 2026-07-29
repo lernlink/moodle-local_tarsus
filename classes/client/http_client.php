@@ -37,8 +37,8 @@ use local_tarsus\material\bit_type;
  */
 class http_client implements client_interface {
 
-    /** @var string Common prefix of every brain access endpoint. */
-    private const API_PREFIX = '/api/v1/brain/access/';
+    /** @var string Common prefix of every brain endpoint. */
+    private const API_PREFIX = '/api/v1/brain/';
 
     /** @var int Seconds allowed for a plain JSON call. */
     private const TIMEOUT = 60;
@@ -98,7 +98,8 @@ class http_client implements client_interface {
         $result = [];
 
         foreach ($this->chunk($resourceids) as $chunk) {
-            $body = $this->send('DELETE', 'untrack/multiple-resources', [
+            $body = $this->send('DELETE', 'access/untrack/multiple-resources', [
+                'brain_id' => $this->brain(),
                 'resource_ids' => json_encode(array_values($chunk)),
             ]);
 
@@ -127,7 +128,8 @@ class http_client implements client_interface {
         $result = [];
 
         foreach ($this->chunk($resourceids) as $chunk) {
-            $body = $this->send('GET', 'check/tracked-resources', [
+            $body = $this->send('GET', 'access/check/tracked-resources', [
+                'brain_id' => $this->brain(),
                 'resource_ids' => json_encode(array_values($chunk)),
             ]);
 
@@ -144,6 +146,27 @@ class http_client implements client_interface {
         }
 
         return $result;
+    }
+
+    #[\Override]
+    public function list_brains(): array {
+        $body = $this->send('GET', 'awareness/list/memories', []);
+
+        $brains = [];
+        foreach (($body['awareness']['brain_ids'] ?? []) as $entry) {
+            if (!is_array($entry) || !isset($entry['_id'])) {
+                continue;
+            }
+            $brains[] = [
+                'brainid' => (string) $entry['_id'],
+                'active' => !empty($entry['active']),
+                'language' => (string) ($entry['brainLanguage'] ?? ''),
+                'tag' => (string) ($entry['brainTag'] ?? ''),
+                'timecreated' => (int) ($entry['brainCreatedDateTime'] ?? 0),
+            ];
+        }
+
+        return $brains;
     }
 
     #[\Override]
@@ -195,19 +218,24 @@ class http_client implements client_interface {
         $type = (string) ($resource['type'] ?? bit_type::TEXT);
 
         $common = [
+            'brain_id' => $this->brain(),
             'resource_id' => (string) ($resource['resource_id'] ?? ''),
             'asset_id' => (string) ($resource['context_id'] ?? ''),
         ];
 
         if ($type === bit_type::URL) {
-            return ['track/url-bits', $common + ['url' => (string) ($resource['url'] ?? '')], null];
+            return ['access/track/url-bits', $common + ['url' => (string) ($resource['url'] ?? '')], null];
         }
 
         if ($type === bit_type::DOCUMENT || $type === bit_type::MEDIA) {
             return $this->build_file_track_request($resource, $common, $title, $type);
         }
 
-        return ['track/text-bits', $common + ['text' => (string) ($resource['text'] ?? ''), 'title' => $title], null];
+        return [
+            'access/track/text-bits',
+            $common + ['text' => (string) ($resource['text'] ?? ''), 'title' => $title],
+            null,
+        ];
     }
 
     /**
@@ -230,13 +258,13 @@ class http_client implements client_interface {
         $curlfile = new \CURLFile($temppath, (string) $file->get_mimetype(), $file->get_filename());
 
         if ($type === bit_type::DOCUMENT) {
-            return ['track/document-bits', $common + ['document' => $curlfile], $temppath];
+            return ['access/track/document-bits', $common + ['document' => $curlfile], $temppath];
         }
 
         $isaudio = str_starts_with((string) $file->get_mimetype(), 'audio/');
 
         return [
-            $isaudio ? 'track/audio-bits' : 'track/video-bits',
+            $isaudio ? 'access/track/audio-bits' : 'access/track/video-bits',
             $common + ['title' => $title, ($isaudio ? 'audio_content' : 'video_content') => $curlfile],
             $temppath,
         ];
@@ -257,6 +285,24 @@ class http_client implements client_interface {
         $file = get_file_storage()->get_file_by_hash($pathnamehash);
 
         return ($file && !$file->is_directory()) ? $file : null;
+    }
+
+    /**
+     * The configured brain id, or fail loudly.
+     *
+     * Listing brains deliberately does not go through here: an admin must be
+     * able to discover the available brains before one has been chosen.
+     *
+     * @return string
+     * @throws \moodle_exception When no brain is configured.
+     */
+    private function brain(): string {
+        $brainid = trim($this->brainid);
+        if ($brainid === '') {
+            throw new \moodle_exception('nobrainselected', 'local_tarsus');
+        }
+
+        return $brainid;
     }
 
     /**
@@ -288,12 +334,11 @@ class http_client implements client_interface {
     private function send(string $method, string $path, array $params, bool $uploading = false): array {
         $baseurl = rtrim(trim($this->baseurl), '/');
 
-        if ($baseurl === '' || trim($this->apikey) === '' || trim($this->brainid) === '') {
+        if ($baseurl === '' || trim($this->apikey) === '') {
             throw new \moodle_exception('notconfigured', 'local_tarsus');
         }
 
         $params['api_key'] = $this->apikey;
-        $params['brain_id'] = $this->brainid;
 
         $curl = new \curl();
         $response = $curl->request($baseurl . self::API_PREFIX . $path, [

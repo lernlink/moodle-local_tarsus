@@ -50,6 +50,26 @@ $string['creditbudget_desc'] = 'Maximale aiCredits pro Zeitraum, bevor Aufrufe a
 
 // Fehler.
 $string['transporterror'] = 'Tarsus-Übertragungsfehler (HTTP {$a}).';
+
+// Brain-Auswahl.
+$string['brains'] = 'Tarsus-Brains';
+$string['brains_desc'] = 'Alle Brains, die mit dem obigen API-Schlüssel erreichbar sind, samt Status. <a href="{$a}">Brain-Liste öffnen</a>, um das Brain dieser Website auszuwählen.';
+$string['brain_col_id'] = 'Brain-ID';
+$string['brain_col_status'] = 'Status';
+$string['brain_col_language'] = 'Sprache';
+$string['brain_col_tag'] = 'Tag';
+$string['brain_col_created'] = 'Erstellt';
+$string['brain_col_action'] = 'Aktion';
+$string['brain_active'] = 'Aktiv';
+$string['brain_inactive'] = 'Inaktiv';
+$string['brain_inuse'] = 'In Verwendung';
+$string['brain_activate'] = 'Aktivieren';
+$string['brain_activated'] = 'Diese Website verwendet jetzt das Brain "{$a}".';
+$string['brain_activate_failed'] = 'Dieses Brain kann nicht aktiviert werden: unbekannt für diesen API-Schlüssel oder nicht mehr aktiv.';
+$string['brain_none_found'] = 'Der API-Schlüssel hat keine Brains geliefert. Basis-URL und API-Schlüssel prüfen oder Tarsus um Freischaltung bitten.';
+$string['brain_none_selected'] = 'Es ist noch kein Brain ausgewählt. Indexierung und Chat bleiben blockiert, bis eines aktiviert wird.';
+$string['brain_gotosettings'] = 'Zurück zu den Tarsus-Einstellungen';
+$string['nobrainselected'] = 'Es ist kein Tarsus-Brain ausgewählt. Bitte eines auf der Seite "Tarsus-Brains" auswählen.';
 $string['notconfigured'] = 'Tarsus ist nicht konfiguriert: Basis-URL, API-Schlüssel und Brain-ID hinterlegen oder den Mock-Modus aktivieren.';
 $string['lockfailed'] = 'Die Sperre für den Schutzmechanismus-Status konnte nicht erlangt werden.';
 $string['blocked_killswitch'] = 'Ausgehender Aufruf blockiert: Der Not-Aus ist aktiviert.';
