@@ -41,6 +41,7 @@ class status_sync {
 
     /** @var string[] Statuses worth asking the brain about. */
     private const SYNCABLE = [
+        status::NOT_INDEXED,
         status::PENDING,
         status::PENDING_CONFIRMATION,
         status::PENDING_REINDEX,
@@ -74,9 +75,9 @@ class status_sync {
     /**
      * Ask the brain about the given resources and apply the answer locally.
      *
-     * Rows in a status the brain cannot speak to (never queued, or awaiting
-     * deletion) are filtered out before the call, so a page of untouched
-     * material costs nothing.
+     * Rows awaiting deletion are filtered out: their status is ours to decide,
+     * not the brain's. Everything else on a page is asked about in one call,
+     * since the batch costs the same for one id as for ten.
      *
      * @param string[] $resourceids Namespaced resource ids.
      * @return array<string, string> The resource ids whose local status changed,

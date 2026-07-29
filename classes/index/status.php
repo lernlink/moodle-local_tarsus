@@ -65,9 +65,23 @@ class status {
     private const TRANSITIONS = [
         self::NOT_INDEXED => [self::PENDING, self::PENDING_DELETION],
         self::PENDING => [self::PENDING_CONFIRMATION, self::INDEXED, self::ERROR, self::PENDING_DELETION],
-        self::PENDING_CONFIRMATION => [self::INDEXED, self::PENDING, self::ERROR, self::PENDING_DELETION],
-        self::INDEXED => [self::PENDING_REINDEX, self::PENDING_DELETION],
-        self::PENDING_REINDEX => [self::PENDING_CONFIRMATION, self::INDEXED, self::ERROR, self::PENDING_DELETION],
+        // The brain is the source of truth: it may report a resource as simply
+        // absent ("failed"), which drops the row back to the start state.
+        self::PENDING_CONFIRMATION => [
+            self::INDEXED,
+            self::PENDING,
+            self::NOT_INDEXED,
+            self::ERROR,
+            self::PENDING_DELETION,
+        ],
+        self::INDEXED => [self::PENDING_REINDEX, self::NOT_INDEXED, self::PENDING_DELETION],
+        self::PENDING_REINDEX => [
+            self::PENDING_CONFIRMATION,
+            self::INDEXED,
+            self::NOT_INDEXED,
+            self::ERROR,
+            self::PENDING_DELETION,
+        ],
         // A pending deletion either completes, or reverts to indexed when the
         // resource turns out to still be referenced (shared-brain race).
         self::PENDING_DELETION => [self::NOT_INDEXED, self::INDEXED, self::ERROR],

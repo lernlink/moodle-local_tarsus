@@ -81,7 +81,9 @@ class http_client implements client_interface {
             }
         }
 
-        if (empty($body['access']['received'])) {
+        // A missing ack is tolerated; only an explicit false means the brain
+        // never got the bytes. HTTP 2xx already carries the real signal.
+        if (isset($body['access']['received']) && $body['access']['received'] === false) {
             throw new transport_exception(0, 'brain did not acknowledge receipt of the resource');
         }
 
@@ -190,19 +192,21 @@ class http_client implements client_interface {
     /**
      * Translate a brain status entry into the local state-machine vocabulary.
      *
-     * An unrecognised status is treated as "still working", never as success,
-     * so an API change can only ever cost an extra poll.
+     * The brain reports exactly three values (confirmed by Tarsus): done,
+     * pending and failed. "failed" means the resource is simply not in the
+     * brain, not that something is broken. The `tracked` flag is redundant
+     * next to `status`, so it is not consulted. An unrecognised value is
+     * treated as "still working", never as success, so an API change can only
+     * ever cost an extra poll.
      *
      * @param array $entry One element of the check/tracked-resources response.
      * @return string A {@see status} constant.
      */
     private function map_status(array $entry): string {
-        $tracked = !empty($entry['tracked']);
-
         return match (strtolower((string) ($entry['status'] ?? ''))) {
-            'done' => $tracked ? status::INDEXED : status::NOT_INDEXED,
-            'failed' => status::ERROR,
-            default => $tracked ? status::INDEXED : status::PENDING_CONFIRMATION,
+            'done' => status::INDEXED,
+            'failed' => status::NOT_INDEXED,
+            default => status::PENDING_CONFIRMATION,
         };
     }
 
