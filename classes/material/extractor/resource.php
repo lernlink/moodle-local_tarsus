@@ -56,6 +56,7 @@ class resource extends base {
                 cmid: $cm->id,
                 title: $this->clean_title($file->get_filename(), $coursecontext),
                 filehash: $contenthash,
+                pathnamehash: $file->get_pathnamehash(),
             );
         }
 

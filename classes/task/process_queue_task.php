@@ -16,8 +16,12 @@
 
 namespace local_tarsus\task;
 
+use local_tarsus\client\client_interface;
+use local_tarsus\client\transport_exception;
+use local_tarsus\guardrail\blocked_exception;
 use local_tarsus\index\repository;
 use local_tarsus\index\status;
+use local_tarsus\index\status_sync;
 use local_tarsus\tracker;
 
 /**
@@ -26,19 +30,14 @@ use local_tarsus\tracker;
  * Each due row in an actionable status is handed to the tracker. Status reads
  * on page render never touch the API — only this worker does.
  *
+ * Confirmation polling is the exception: the brain reports many resources per
+ * call, so those rows are batched instead of walked one by one.
+ *
  * @package    local_tarsus
  * @copyright  2026 lern.link GmbH
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class process_queue_task extends \core\task\scheduled_task {
-
-    /** @var string[] Statuses processed each run, in order. */
-    private const ACTIONABLE = [
-        status::PENDING,
-        status::PENDING_REINDEX,
-        status::PENDING_CONFIRMATION,
-        status::PENDING_DELETION,
-    ];
 
     #[\Override]
     public function get_name(): string {
@@ -50,9 +49,54 @@ class process_queue_task extends \core\task\scheduled_task {
         $repo = new repository();
         $tracker = new tracker();
 
-        foreach (self::ACTIONABLE as $status) {
+        // Uploads first, so anything queued this run can be confirmed later.
+        foreach ([status::PENDING, status::PENDING_REINDEX] as $status) {
             foreach ($repo->get_due($status) as $row) {
                 $tracker->process($row);
+            }
+        }
+
+        $this->confirm_due($repo);
+
+        foreach ($repo->get_due(status::PENDING_DELETION) as $row) {
+            $tracker->process($row);
+        }
+    }
+
+    /**
+     * Poll every resource awaiting confirmation, batched by the wire limit.
+     *
+     * A resource the brain has not finished ingesting keeps its retry budget
+     * ticking, so a permanently stuck upload still ends in the error state.
+     *
+     * @param repository $repo Index map repository.
+     * @return void
+     */
+    private function confirm_due(repository $repo): void {
+        $due = $repo->get_due(status::PENDING_CONFIRMATION);
+        if ($due === []) {
+            return;
+        }
+
+        $sync = new status_sync($repo);
+
+        foreach (array_chunk(array_column($due, 'resourceid'), client_interface::BATCH_LIMIT) as $chunk) {
+            try {
+                $changed = $sync->refresh($chunk);
+            } catch (blocked_exception $e) {
+                return; // Guardrail held the call; the queue holds with it.
+            } catch (transport_exception $e) {
+                foreach ($chunk as $resourceid) {
+                    $repo->record_failure($resourceid);
+                }
+                return;
+            }
+
+            foreach ($chunk as $resourceid) {
+                if (!isset($changed[$resourceid])) {
+                    // Still ingesting: back off before asking again.
+                    $repo->record_failure($resourceid);
+                }
             }
         }
     }

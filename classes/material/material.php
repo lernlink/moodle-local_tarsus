@@ -40,6 +40,7 @@ class material {
      * @param string      $title      Human-readable title.
      * @param string      $body       Inline text/url payload ('' for file bits).
      * @param string|null $filehash   Source file content hash ('' / null for inline bits).
+     * @param string|null $pathnamehash Stored-file path hash, so the client can re-open the file to upload it.
      */
     public function __construct(
         public readonly string $resourceid,
@@ -49,7 +50,8 @@ class material {
         public readonly int $cmid,
         public readonly string $title,
         public readonly string $body = '',
-        public readonly ?string $filehash = null
+        public readonly ?string $filehash = null,
+        public readonly ?string $pathnamehash = null
     ) {
     }
 
@@ -93,6 +95,7 @@ class material {
             case bit_type::DOCUMENT:
             case bit_type::MEDIA:
                 $payload['contenthash'] = (string) $this->filehash;
+                $payload['pathnamehash'] = (string) $this->pathnamehash;
                 $payload['filename'] = $this->title;
                 break;
         }

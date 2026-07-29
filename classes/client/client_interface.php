@@ -32,6 +32,9 @@ namespace local_tarsus\client;
  */
 interface client_interface {
 
+    /** @var int Maximum resource ids accepted by one batch status check. */
+    public const BATCH_LIMIT = 10;
+
     /**
      * Grounded retrieval: answer a query from tracked brain content.
      *
@@ -64,6 +67,18 @@ interface client_interface {
      * @return array Result with at least 'status'.
      */
     public function get_resource_status(string $resourceid): array;
+
+    /**
+     * Read the brain-side status of many resources in as few calls as possible.
+     *
+     * Implementations chunk the input by {@see self::BATCH_LIMIT}, so callers
+     * may pass any number of ids without knowing the wire limit.
+     *
+     * @param string[] $resourceids Namespaced resource ids.
+     * @return array<string, array{status: string, tracked: bool, brainstatus: string}>
+     *         Keyed by resource id; ids the brain does not report are omitted.
+     */
+    public function check_tracked_resources(array $resourceids): array;
 
     /**
      * Generate learning widgets (tests / stacks). Phase 2.

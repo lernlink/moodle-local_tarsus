@@ -108,6 +108,22 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function check_tracked_resources(array $resourceids): array {
+        $this->maybe_fail();
+
+        $result = [];
+        foreach (array_unique($resourceids) as $resourceid) {
+            $result[$resourceid] = [
+                'status' => 'indexed',
+                'tracked' => true,
+                'brainstatus' => 'done',
+            ];
+        }
+
+        return $result;
+    }
+
+    #[\Override]
     public function generate_widgets(string $contextid, array $params): array {
         // Phase 2.
         throw new \coding_exception('generate_widgets is not implemented in Phase 1.');

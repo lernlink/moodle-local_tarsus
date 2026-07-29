@@ -148,6 +148,11 @@ class tracker {
             $hash = $material ? $material->content_hash() : ($row->contenthash ?: sha1($row->resourceid));
             $bitref = (string) ($result['bitref'] ?? $row->bitref ?? '');
             $this->repo->mark_indexed($row->resourceid, $bitref, $hash);
+        } else if (($result['status'] ?? '') === status::ERROR) {
+            // The brain rejected the content: retrying the same bytes cannot help.
+            if (status::can_transition($row->status, status::ERROR)) {
+                $this->repo->set_status($row->resourceid, status::ERROR);
+            }
         } else {
             // Not confirmed yet: poll again with backoff; error when exhausted.
             $this->repo->record_failure($row->resourceid);

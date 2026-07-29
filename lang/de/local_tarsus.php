@@ -50,6 +50,7 @@ $string['creditbudget_desc'] = 'Maximale aiCredits pro Zeitraum, bevor Aufrufe a
 
 // Fehler.
 $string['transporterror'] = 'Tarsus-Übertragungsfehler (HTTP {$a}).';
+$string['notconfigured'] = 'Tarsus ist nicht konfiguriert: Basis-URL, API-Schlüssel und Brain-ID hinterlegen oder den Mock-Modus aktivieren.';
 $string['lockfailed'] = 'Die Sperre für den Schutzmechanismus-Status konnte nicht erlangt werden.';
 $string['blocked_killswitch'] = 'Ausgehender Aufruf blockiert: Der Not-Aus ist aktiviert.';
 $string['blocked_breaker'] = 'Ausgehender Aufruf blockiert: Der Schutzschalter ist offen.';

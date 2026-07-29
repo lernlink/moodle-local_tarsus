@@ -50,6 +50,7 @@ $string['creditbudget_desc'] = 'Maximum aiCredits spent per period before calls 
 
 // Errors.
 $string['transporterror'] = 'Tarsus transport error (HTTP {$a}).';
+$string['notconfigured'] = 'Tarsus is not configured: set the base URL, API key and brain ID, or enable mock mode.';
 $string['lockfailed'] = 'Could not acquire the guardrail state lock.';
 $string['blocked_killswitch'] = 'Outbound call blocked: the kill switch is engaged.';
 $string['blocked_breaker'] = 'Outbound call blocked: the circuit breaker is open.';
