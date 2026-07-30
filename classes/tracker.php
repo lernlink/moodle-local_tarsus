@@ -120,8 +120,10 @@ class tracker {
         if (($result['status'] ?? '') === status::INDEXED) {
             $this->repo->mark_indexed($row->resourceid, $bitref, $hash);
         } else {
-            $this->repo->reset_attempts($row->resourceid);
-            $this->repo->set_status($row->resourceid, status::PENDING_CONFIRMATION);
+            // Persist the hash of what was actually sent: confirmation must
+            // compare against this, not against whatever the source contains
+            // by the time the brain answers.
+            $this->repo->mark_uploaded($row->resourceid, $hash);
         }
     }
 
@@ -144,8 +146,10 @@ class tracker {
         }
 
         if (($result['status'] ?? '') === status::INDEXED) {
-            $material = $this->resolver->resolve_by_resource_id($row->resourceid);
-            $hash = $material ? $material->content_hash() : ($row->contenthash ?: sha1($row->resourceid));
+            // The upload persisted the hash of what was sent; recomputing it
+            // here would silently absorb any edit made while the brain was
+            // still ingesting the previous content.
+            $hash = (string) $row->contenthash;
             $bitref = (string) ($result['bitref'] ?? $row->bitref ?? '');
             $this->repo->mark_indexed($row->resourceid, $bitref, $hash);
         } else if (($result['status'] ?? '') === status::NOT_INDEXED) {

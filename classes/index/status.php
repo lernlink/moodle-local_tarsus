@@ -85,8 +85,16 @@ class status {
         // A pending deletion either completes, or reverts to indexed when the
         // resource turns out to still be referenced (shared-brain race).
         self::PENDING_DELETION => [self::NOT_INDEXED, self::INDEXED, self::ERROR],
-        // From error a manual retry re-enters the pipeline, or the row is dropped.
-        self::ERROR => [self::PENDING, self::PENDING_REINDEX, self::PENDING_DELETION, self::NOT_INDEXED],
+        // From error a manual retry re-enters the pipeline, or the row is
+        // dropped. The brain may also confirm the resource as indexed after
+        // the local retry budget ran out (slow ingestion): that self-heals.
+        self::ERROR => [
+            self::PENDING,
+            self::PENDING_REINDEX,
+            self::PENDING_DELETION,
+            self::NOT_INDEXED,
+            self::INDEXED,
+        ],
     ];
 
     /**

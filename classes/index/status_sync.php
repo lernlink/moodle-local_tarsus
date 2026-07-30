@@ -21,7 +21,6 @@ use local_tarsus\client\client_interface;
 use local_tarsus\client\transport_exception;
 use local_tarsus\guardrail\blocked_exception;
 use local_tarsus\guardrail\pipeline;
-use local_tarsus\material\resolver;
 
 /**
  * Reconciles a set of local index rows against the brain in one batch call.
@@ -39,12 +38,16 @@ use local_tarsus\material\resolver;
  */
 class status_sync {
 
-    /** @var string[] Statuses worth asking the brain about. */
+    /** @var string[] Statuses worth asking the brain about.
+     *
+     * Rows with queued local work (pending, pendingreindex, pendingdeletion)
+     * are deliberately absent: the brain's answer describes the *previous*
+     * content, and adopting it would cancel the queued upload — e.g. flip a
+     * pendingreindex row back to indexed while the stale bit stays live.
+     */
     private const SYNCABLE = [
         status::NOT_INDEXED,
-        status::PENDING,
         status::PENDING_CONFIRMATION,
-        status::PENDING_REINDEX,
         status::INDEXED,
         status::ERROR,
     ];
@@ -57,27 +60,25 @@ class status_sync {
      *
      * @param repository|null       $repo     Index map repository.
      * @param pipeline|null         $pipeline Guardrails pipeline.
-     * @param resolver|null         $resolver Material resolver (for the content hash).
      * @param client_interface|null $client   Tarsus client (defaults to the configured one).
      */
     public function __construct(
         private ?repository $repo = null,
         private ?pipeline $pipeline = null,
-        private ?resolver $resolver = null,
         ?client_interface $client = null
     ) {
         $this->repo ??= new repository();
         $this->pipeline ??= new pipeline();
-        $this->resolver ??= new resolver();
         $this->client = $client ?? client_factory::get_client();
     }
 
     /**
      * Ask the brain about the given resources and apply the answer locally.
      *
-     * Rows awaiting deletion are filtered out: their status is ours to decide,
-     * not the brain's. Everything else on a page is asked about in one call,
-     * since the batch costs the same for one id as for ten.
+     * Rows with queued local work (upload, re-index or deletion) are filtered
+     * out: their status is ours to decide, not the brain's. Everything else on
+     * a page is asked about in one call, since the batch costs the same for
+     * one id as for ten.
      *
      * @param string[] $resourceids Namespaced resource ids.
      * @return array<string, string> The resource ids whose local status changed,
@@ -141,9 +142,10 @@ class status_sync {
         }
 
         if ($reported === status::INDEXED) {
-            $material = $this->resolver->resolve_by_resource_id($row->resourceid);
-            $hash = $material ? $material->content_hash() : ($row->contenthash ?: sha1($row->resourceid));
-            $this->repo->mark_indexed($row->resourceid, (string) ($row->bitref ?? ''), $hash);
+            // The brain confirmed the content that was uploaded, whose hash is
+            // already on the row. Recomputing it from current Moodle state
+            // would mask any edit made since the upload.
+            $this->repo->mark_indexed($row->resourceid, (string) ($row->bitref ?? ''), (string) $row->contenthash);
             return true;
         }
 

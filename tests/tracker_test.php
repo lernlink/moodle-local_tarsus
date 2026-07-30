@@ -20,6 +20,9 @@ use local_tarsus\client\mock_client;
 use local_tarsus\index\reference_store;
 use local_tarsus\index\repository;
 use local_tarsus\index\status;
+use local_tarsus\material\bit_type;
+use local_tarsus\material\material;
+use local_tarsus\material\resolver;
 
 /**
  * Tests for the indexation tracker orchestration service.
@@ -119,6 +122,50 @@ final class tracker_test extends \advanced_testcase {
         $tracker->process($repo->get(self::RID));
 
         $this->assertSame(status::INDEXED, $repo->get(self::RID)->status);
+    }
+
+    /**
+     * Confirmation records the hash of what was uploaded, not of the current source.
+     *
+     * An edit made while the brain is still ingesting must stay visible as a
+     * hash mismatch, so the next evaluation queues a re-index instead of
+     * treating the stale bit as current.
+     *
+     * @return void
+     */
+    public function test_confirmation_keeps_upload_time_hash(): void {
+        $this->resetAfterTest(true);
+
+        $fakeresolver = new class extends resolver {
+            /** @var material|null The material to serve. */
+            public ?material $material = null;
+
+            #[\Override]
+            public function resolve_by_resource_id(string $resourceid): ?material {
+                return $this->material;
+            }
+        };
+        $makematerial = fn(string $body): material => new material(
+            self::RID, bit_type::TEXT, 100, 'mod_resource', 42, 'Title', $body
+        );
+
+        $repo = new repository();
+        $tracker = new tracker(repo: $repo, resolver: $fakeresolver, client: new mock_client(async: true));
+        $repo->ensure(self::RID, 100, 'mod_resource', 42);
+        $repo->set_status(self::RID, status::PENDING);
+
+        $fakeresolver->material = $makematerial('version-1');
+        $tracker->process($repo->get(self::RID));
+        $this->assertSame(status::PENDING_CONFIRMATION, $repo->get(self::RID)->status);
+
+        // The source changes while the brain is still ingesting version-1.
+        $fakeresolver->material = $makematerial('version-2');
+        $tracker->process($repo->get(self::RID));
+
+        $row = $repo->get(self::RID);
+        $this->assertSame(status::INDEXED, $row->status);
+        $this->assertSame($makematerial('version-1')->content_hash(), $row->contenthash);
+        $this->assertNotSame($makematerial('version-2')->content_hash(), $row->contenthash);
     }
 
     /**

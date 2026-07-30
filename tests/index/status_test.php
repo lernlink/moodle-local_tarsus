@@ -51,6 +51,15 @@ final class status_test extends \advanced_testcase {
     }
 
     /**
+     * A row that failed locally may still be confirmed by the brain later.
+     *
+     * @return void
+     */
+    public function test_error_self_heals_to_indexed(): void {
+        $this->assertTrue(status::can_transition(status::ERROR, status::INDEXED));
+    }
+
+    /**
      * A no-op transition is always allowed (idempotent writes).
      *
      * @return void

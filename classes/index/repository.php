@@ -137,6 +137,37 @@ class repository {
     }
 
     /**
+     * Record a successful upload: await confirmation, remembering what was sent.
+     *
+     * The stored hash describes the content the brain actually received, so a
+     * later confirmation must not recompute it from current Moodle state — the
+     * source may have changed in the meantime.
+     *
+     * @param string $resourceid  Namespaced resource id.
+     * @param string $contenthash Hash of the content that was uploaded.
+     * @return void
+     * @throws coding_exception When the row is missing or the transition is illegal.
+     */
+    public function mark_uploaded(string $resourceid, string $contenthash): void {
+        global $DB;
+
+        $row = $this->require_row($resourceid);
+
+        if (!status::can_transition($row->status, status::PENDING_CONFIRMATION)) {
+            throw new coding_exception(
+                "Illegal index status transition {$row->status} -> " . status::PENDING_CONFIRMATION . " for {$resourceid}"
+            );
+        }
+
+        $row->status = status::PENDING_CONFIRMATION;
+        $row->contenthash = $contenthash;
+        $row->attempts = 0;
+        $row->nextretry = 0;
+        $row->timemodified = time();
+        $DB->update_record(self::TABLE, $row);
+    }
+
+    /**
      * Record a failed attempt: schedule the next retry, or fail to error.
      *
      * @param string $resourceid Namespaced resource id.
