@@ -24,6 +24,7 @@ use local_tarsus\guardrail\blocked_exception;
 use local_tarsus\index\reference_store;
 use local_tarsus\index\repository;
 use local_tarsus\index\status;
+use local_tarsus\material\resolver;
 
 /**
  * Event observers that keep the brain in step with Moodle (push side of §5).
@@ -162,6 +163,66 @@ class observer {
             return;
         }
 
+        self::retire_vanished_material($cminfo);
+
         (new indexer())->refresh_cm($cminfo);
+    }
+
+    /**
+     * Untrack anything this activity used to hold but no longer produces.
+     *
+     * Moodle raises no event when a file is replaced or removed inside an
+     * activity, so there is nothing to listen for at that level. Comparing
+     * what the activity holds now against what is recorded for it catches
+     * every such disappearance without having to enumerate the causes.
+     *
+     * @param \cm_info $cm The updated course module.
+     * @return void
+     */
+    private static function retire_vanished_material(\cm_info $cm): void {
+        $resolver = new resolver();
+        if (!$resolver->supports($cm->modname)) {
+            // Cannot tell "the material is gone" from "we no longer read this
+            // kind of activity", and the second must not delete anything.
+            return;
+        }
+
+        $component = 'mod_' . $cm->modname;
+        $repo = new repository();
+        $rows = $repo->get_by_owner($component, (int) $cm->id);
+        if ($rows === []) {
+            return;
+        }
+
+        $current = [];
+        foreach ($resolver->resolve($cm) as $material) {
+            $current[$material->resourceid] = true;
+        }
+
+        $refs = new reference_store();
+        $doomed = [];
+        foreach ($rows as $row) {
+            if (isset($current[$row->resourceid])) {
+                continue;
+            }
+
+            // This activity no longer produces it, so it withdraws its claim;
+            // a bit another owner still needs stays protected.
+            $refs->remove($row->resourceid, $component, (int) $cm->id);
+            if ($refs->has_references($row->resourceid)) {
+                continue;
+            }
+
+            if (status::can_transition($row->status, status::PENDING_DELETION)) {
+                $repo->set_status($row->resourceid, status::PENDING_DELETION);
+                $doomed[] = $repo->get($row->resourceid);
+            }
+        }
+
+        if ($doomed === []) {
+            return;
+        }
+
+        self::deliver(fn() => (new tracker())->process_deletions($doomed));
     }
 }

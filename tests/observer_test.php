@@ -128,6 +128,70 @@ final class observer_test extends \advanced_testcase {
     }
 
     /**
+     * A file removed from an activity is untracked on the next save.
+     *
+     * Moodle emits no event for the file itself, so this is caught by
+     * comparing what the activity holds now against what is recorded for it.
+     *
+     * @return void
+     */
+    public function test_removed_file_is_untracked_on_update(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
+        $modcontext = \context_module::instance($resource->cmid);
+
+        // Three files, so removing one still leaves the rest multi-file and
+        // their ids untouched.
+        $fs = get_file_storage();
+        $fs->delete_area_files($modcontext->id, 'mod_resource', 'content');
+        foreach (['one.txt', 'two.txt', 'three.txt'] as $filename) {
+            $fs->create_file_from_string([
+                'contextid' => $modcontext->id,
+                'component' => 'mod_resource',
+                'filearea' => 'content',
+                'itemid' => 0,
+                'filepath' => '/',
+                'filename' => $filename,
+            ], 'contents of ' . $filename);
+        }
+
+        $cm = get_fast_modinfo($course->id)->get_cm($resource->cmid);
+        $indexer = new indexer();
+        $indexer->index_cm($cm);
+
+        $repo = new repository();
+        foreach ($repo->get_by_owner('mod_resource', $resource->cmid) as $row) {
+            $repo->mark_uploaded($row->resourceid, 'hash-' . $row->id);
+            $repo->mark_indexed($row->resourceid, 'bit-' . $row->id, 'hash-' . $row->id);
+        }
+        $this->assertCount(3, $repo->get_by_owner('mod_resource', $resource->cmid));
+
+        // The teacher drops one file and saves the activity.
+        $gone = $fs->get_file($modcontext->id, 'mod_resource', 'content', 0, '/', 'two.txt');
+        $goneid = null;
+        foreach ($repo->get_by_owner('mod_resource', $resource->cmid) as $row) {
+            if (str_ends_with($row->resourceid, ':two.txt')) {
+                $goneid = $row->resourceid;
+            }
+        }
+        $this->assertNotNull($goneid);
+        $gone->delete();
+
+        \core\event\course_module_updated::create_from_cm(
+            get_fast_modinfo($course->id)->get_cm($resource->cmid),
+            $modcontext
+        )->trigger();
+
+        $remaining = $repo->get_by_owner('mod_resource', $resource->cmid);
+        $this->assertCount(2, $remaining);
+        $this->assertNull($repo->get($goneid));
+        $this->assertFalse((new reference_store())->has_references($goneid));
+    }
+
+    /**
      * A reference still held by another owner keeps the resource indexed.
      *
      * @return void
