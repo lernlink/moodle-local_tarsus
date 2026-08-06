@@ -28,16 +28,25 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    $settings = new admin_settingpage('local_tarsus', get_string('pluginname', 'local_tarsus'));
-    $ADMIN->add('localplugins', $settings);
+    // One node in the admin tree holding every Tarsus page, rather than three
+    // siblings scattered among the other local plugins.
+    $ADMIN->add('localplugins', new admin_category(
+        'local_tarsus_category',
+        get_string('pluginname', 'local_tarsus')
+    ));
 
-    $ADMIN->add('localplugins', new admin_externalpage(
+    // Keep the page name: /admin/settings.php?section=local_tarsus is what
+    // the plugin overview and existing links point at.
+    $settings = new admin_settingpage('local_tarsus', get_string('settings'));
+    $ADMIN->add('local_tarsus_category', $settings);
+
+    $ADMIN->add('local_tarsus_category', new admin_externalpage(
         'local_tarsus_brains',
         get_string('brains', 'local_tarsus'),
         new moodle_url('/local/tarsus/brains.php')
     ));
 
-    $ADMIN->add('localplugins', new admin_externalpage(
+    $ADMIN->add('local_tarsus_category', new admin_externalpage(
         'local_tarsus_deletions',
         get_string('deletions', 'local_tarsus'),
         new moodle_url('/local/tarsus/deletions.php')

@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = 'Tarsus-Grundlage';
+$string['pluginname'] = 'Tarsus Zero';
 
 // Verbindungseinstellungen.
 $string['settings_connection'] = 'Tarsus-Verbindung';
@@ -87,10 +87,6 @@ $string['blocked_killswitch'] = 'Ausgehender Aufruf blockiert: Der Not-Aus ist a
 $string['blocked_breaker'] = 'Ausgehender Aufruf blockiert: Der Schutzschalter ist offen.';
 $string['blocked_budget'] = 'Ausgehender Aufruf blockiert: Das Credit-Budget ist aufgebraucht.';
 $string['blocked_ratelimit'] = 'Ausgehender Aufruf blockiert: Die Ratenbegrenzung wurde erreicht.';
-
-// Geplante Aufgaben.
-$string['task:processqueue'] = 'Tarsus-Indexierungswarteschlange verarbeiten';
-$string['task:reconcile'] = 'Tarsus-Indexstatus abgleichen';
 
 // Bezeichnungen für den Indexierungsstatus.
 $string['status:notindexed'] = 'Nicht indexiert';
