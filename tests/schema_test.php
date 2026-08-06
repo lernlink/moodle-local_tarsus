@@ -108,14 +108,20 @@ final class schema_test extends \advanced_testcase {
         global $CFG, $DB;
 
         $this->resetAfterTest(true);
+        // Moodle always has these loaded when it runs an upgrade.
+        require_once($CFG->libdir . '/upgradelib.php');
         require_once($CFG->dirroot . '/local/tarsus/db/upgrade.php');
 
         $dbman = $DB->get_manager();
         $dbman->drop_table(new xmldb_table('local_tarsus_index'));
         $this->assertFalse($dbman->table_exists('local_tarsus_index'));
 
-        // Invoke the genuine upgrade function as Moodle would.
-        $this->assertTrue(xmldb_local_tarsus_upgrade(2026062505));
+        // Invoke the genuine upgrade function as Moodle would, from the
+        // installed version: the schema guard runs on every upgrade, while
+        // the version-gated migration steps have their own tests.
+        $plugin = new \stdClass();
+        require($CFG->dirroot . '/local/tarsus/version.php');
+        $this->assertTrue(xmldb_local_tarsus_upgrade($plugin->version));
 
         foreach (schema::TABLES as $tablename) {
             $this->assertTrue(

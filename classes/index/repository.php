@@ -257,6 +257,16 @@ class repository {
     }
 
     /**
+     * Every row in the index map.
+     *
+     * @return \stdClass[] All rows.
+     */
+    public function get_all(): array {
+        global $DB;
+        return $DB->get_records(self::TABLE);
+    }
+
+    /**
      * All rows belonging to a context (i.e. to one course).
      *
      * @param int $contextid The owning course context id.

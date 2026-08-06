@@ -84,7 +84,8 @@ final class resolver_test extends \advanced_testcase {
     }
 
     /**
-     * A resource yields one document bit per file, keyed by content hash.
+     * A single-file resource yields one document bit keyed by 'main', so
+     * replacing the file re-indexes that bit instead of orphaning it.
      *
      * @return void
      */
@@ -96,8 +97,10 @@ final class resolver_test extends \advanced_testcase {
         $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $modcontext = \context_module::instance($resource->cmid);
 
-        // Add a deterministic file to the resource content area.
+        // Replace the generator's file with one known file, so the activity
+        // holds exactly one bit.
         $fs = get_file_storage();
+        $fs->delete_area_files($modcontext->id, 'mod_resource', 'content');
         $filerecord = [
             'contextid' => $modcontext->id,
             'component' => 'mod_resource',
@@ -117,6 +120,46 @@ final class resolver_test extends \advanced_testcase {
         $this->assertNotEmpty($match);
         $this->assertSame(bit_type::DOCUMENT, $match[0]->type);
         $this->assertSame($stored->get_contenthash(), $match[0]->filehash);
+        $this->assertStringEndsWith(':main', $match[0]->resourceid);
+        $this->assertStringNotContainsString($stored->get_contenthash(), $match[0]->resourceid);
+    }
+
+    /**
+     * Replacing the file keeps the resource id and only moves the hash, which
+     * is what turns a replacement into a re-index instead of an orphan.
+     *
+     * @return void
+     */
+    public function test_replacing_a_file_keeps_the_resource_id(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
+        $modcontext = \context_module::instance($resource->cmid);
+
+        $fs = get_file_storage();
+        $filerecord = [
+            'contextid' => $modcontext->id,
+            'component' => 'mod_resource',
+            'filearea' => 'content',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => 'handout.txt',
+        ];
+
+        // Start from a single known file, so the bit keys on 'main'.
+        $fs->delete_area_files($modcontext->id, 'mod_resource', 'content');
+        $fs->create_file_from_string($filerecord, 'first edition');
+        $before = (new resolver())->resolve($this->cm($resource, $course->id))[0];
+
+        // The teacher uploads a new version of the same handout.
+        $fs->delete_area_files($modcontext->id, 'mod_resource', 'content');
+        $fs->create_file_from_string($filerecord, 'second edition, revised');
+        $after = (new resolver())->resolve($this->cm($resource, $course->id))[0];
+
+        $this->assertSame($before->resourceid, $after->resourceid);
+        $this->assertNotSame($before->content_hash(), $after->content_hash());
     }
 
     /**

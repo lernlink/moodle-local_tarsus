@@ -43,5 +43,23 @@ function xmldb_local_tarsus_upgrade($oldversion): bool {
     // Guarantee all tables exist regardless of upgrade history.
     \local_tarsus\schema::ensure_tables($dbman);
 
+    if ($oldversion < 2026073102) {
+        // File bits used to be keyed by their content hash, so replacing a
+        // file orphaned the previous bit in the brain. Withdraw those ids;
+        // the material will be re-indexed under its stable id on request.
+        try {
+            $retired = \local_tarsus\index\legacy_ids::retire();
+            if ($retired > 0) {
+                mtrace("local_tarsus: retired {$retired} content-addressed resource ids");
+            }
+        } catch (moodle_exception $e) {
+            // An unreachable or unconfigured brain must not block the upgrade.
+            // The rows keep their pendingdeletion status for a later sweep.
+            mtrace('local_tarsus: could not withdraw legacy resource ids: ' . $e->getMessage());
+        }
+
+        upgrade_plugin_savepoint(true, 2026073102, 'local', 'tarsus');
+    }
+
     return true;
 }
