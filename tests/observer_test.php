@@ -30,6 +30,37 @@ use local_tarsus\index\status;
  */
 final class observer_test extends \advanced_testcase {
 
+    #[\Override]
+    protected function setUp(): void {
+        parent::setUp();
+        observer::reset_upload_budget();
+    }
+
+    /**
+     * Create an indexed page and return its cm and resource id.
+     *
+     * @param \stdClass $course The course to create it in.
+     * @param string    $content The page body.
+     * @return array{0: \cm_info, 1: string} The module info and resource id.
+     */
+    private function make_indexed_page(\stdClass $course, string $content): array {
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id,
+            'content' => $content,
+            'contentformat' => FORMAT_HTML,
+        ]);
+        $cm = get_fast_modinfo($course->id)->get_cm($page->cmid);
+
+        $indexer = new indexer();
+        $resourceid = $indexer->index_cm($cm)[0];
+        $indexer->execute_now($resourceid);
+
+        $repo = new repository();
+        $repo->set_status($resourceid, status::INDEXED);
+
+        return [$cm, $resourceid];
+    }
+
     /**
      * Deleting a module untracks its orphaned bits there and then.
      *
@@ -220,38 +251,123 @@ final class observer_test extends \advanced_testcase {
     }
 
     /**
-     * Updating a tracked module queues it for re-indexing.
+     * Fire the update event for a module, as saving its form would.
+     *
+     * @param \cm_info $cm The module that was saved.
+     * @return void
+     */
+    private function trigger_update(\cm_info $cm): void {
+        \core\event\course_module_updated::create([
+            'objectid' => $cm->id,
+            'context' => \context_module::instance($cm->id),
+            'other' => [
+                'modulename' => $cm->modname,
+                'instanceid' => $cm->instance,
+                'name' => $cm->name,
+            ],
+        ])->trigger();
+    }
+
+    /**
+     * Editing tracked content sends the new version while the teacher saves,
+     * so nobody has to press Re-index.
      *
      * @return void
      */
-    public function test_module_update_triggers_reindex(): void {
+    public function test_module_update_uploads_the_new_version(): void {
         global $DB;
         $this->resetAfterTest(true);
 
         $course = $this->getDataGenerator()->create_course();
-        $page = $this->getDataGenerator()->create_module('page', [
-            'course' => $course->id,
-            'content' => '<p>Original</p>',
-            'contentformat' => FORMAT_HTML,
-        ]);
-        $cm = get_fast_modinfo($course->id)->get_cm($page->cmid);
+        [$cm, $resourceid] = $this->make_indexed_page($course, '<p>Original</p>');
 
-        // Track and index the page, then mutate its body.
-        $resourceid = (new \local_tarsus\indexer())->index_cm($cm)[0];
-        (new repository())->mark_indexed($resourceid, 'bit-1', 'stale');
-        $DB->set_field('page', 'content', '<p>Edited</p>', ['id' => $page->id]);
+        $DB->set_field('page', 'content', '<p>Edited</p>', ['id' => $cm->instance]);
+        $this->trigger_update($cm);
 
-        $event = \core\event\course_module_updated::create([
-            'objectid' => $cm->id,
-            'context' => \context_module::instance($cm->id),
-            'other' => [
-                'modulename' => 'page',
-                'instanceid' => $cm->instance,
-                'name' => $cm->name,
-            ],
-        ]);
-        $event->trigger();
+        // The mock brain confirms asynchronously, so the row is now awaiting
+        // confirmation of the *new* content rather than sitting on a stale one.
+        $row = (new repository())->get($resourceid);
+        $this->assertSame(status::PENDING_CONFIRMATION, $row->status);
+
+        $material = (new \local_tarsus\material\resolver())->resolve_by_resource_id($resourceid);
+        $this->assertSame($material->content_hash(), $row->contenthash);
+    }
+
+    /**
+     * Saving without touching the content costs nothing.
+     *
+     * @return void
+     */
+    public function test_module_update_without_a_change_does_nothing(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        [$cm, $resourceid] = $this->make_indexed_page($course, '<p>Unchanged</p>');
+
+        $this->trigger_update($cm);
+
+        $this->assertSame(status::INDEXED, (new repository())->get($resourceid)->status);
+    }
+
+    /**
+     * When the brain refuses, the row shows the drift instead of claiming to
+     * be current, and the save itself is unaffected.
+     *
+     * @return void
+     */
+    public function test_failed_auto_upload_leaves_content_changed(): void {
+        global $DB;
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        [$cm, $resourceid] = $this->make_indexed_page($course, '<p>Original</p>');
+
+        $DB->set_field('page', 'content', '<p>Edited</p>', ['id' => $cm->instance]);
+        set_config('killswitch', 1, 'local_tarsus');
+
+        $this->trigger_update($cm);
+        $this->assertDebuggingCalled();
 
         $this->assertSame(status::PENDING_REINDEX, (new repository())->get($resourceid)->status);
+    }
+
+    /**
+     * One request only uploads so much: a restore or an import walking many
+     * activities defers the rest to the teacher rather than running for ever.
+     *
+     * @return void
+     */
+    public function test_upload_budget_defers_the_rest(): void {
+        global $DB;
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+
+        $pages = [];
+        for ($i = 0; $i <= observer::MAX_UPLOADS_PER_REQUEST; $i++) {
+            $pages[] = $this->make_indexed_page($course, "<p>Body {$i}</p>");
+        }
+
+        // Everything changes at once, as a restore would leave it.
+        foreach ($pages as [$cm, $resourceid]) {
+            $DB->set_field('page', 'content', '<p>Edited</p>', ['id' => $cm->instance]);
+        }
+        foreach ($pages as [$cm, $resourceid]) {
+            $this->trigger_update($cm);
+        }
+
+        $repo = new repository();
+        $uploaded = 0;
+        $deferred = 0;
+        foreach ($pages as [$cm, $resourceid]) {
+            if ($repo->get($resourceid)->status === status::PENDING_REINDEX) {
+                $deferred++;
+            } else {
+                $uploaded++;
+            }
+        }
+
+        $this->assertSame(observer::MAX_UPLOADS_PER_REQUEST, $uploaded);
+        $this->assertSame(1, $deferred);
     }
 }

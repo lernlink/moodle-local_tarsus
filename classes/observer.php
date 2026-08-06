@@ -44,6 +44,12 @@ use local_tarsus\material\resolver;
  */
 class observer {
 
+    /** @var int Uploads one request may perform before deferring the rest. */
+    public const MAX_UPLOADS_PER_REQUEST = 5;
+
+    /** @var int Uploads performed so far in this request. */
+    private static int $uploads = 0;
+
     /**
      * Remove an activity's bits from the brain as the activity is deleted.
      *
@@ -146,7 +152,9 @@ class observer {
      * Re-index already-tracked bits when a module is updated.
      *
      * Only content the teacher has already chosen to index is refreshed;
-     * untracked material is never auto-tracked from an edit.
+     * untracked material is never auto-tracked from an edit. Where the
+     * content did change, the new version is sent while the teacher saves,
+     * so the brain matches Moodle without anyone pressing Re-index.
      *
      * @param course_module_updated $event The triggered event.
      * @return void
@@ -165,7 +173,65 @@ class observer {
 
         self::retire_vanished_material($cminfo);
 
-        (new indexer())->refresh_cm($cminfo);
+        $indexer = new indexer();
+        $changed = $indexer->refresh_cm($cminfo);
+        if ($changed === []) {
+            return; // Nothing the brain holds has moved on.
+        }
+
+        self::upload_changed($indexer, $changed);
+    }
+
+    /**
+     * Send the changed material to the brain within the saving request.
+     *
+     * A single save touches one activity, but a restore or an import walks
+     * hundreds in one request; rather than trying to recognise which is
+     * happening, the work itself is bounded. Anything past the budget keeps
+     * its content-changed status and waits for the teacher, which is also
+     * where a failed upload lands.
+     *
+     * @param indexer  $indexer     The indexer to execute with.
+     * @param string[] $resourceids The resource ids whose content changed.
+     * @return void
+     */
+    private static function upload_changed(indexer $indexer, array $resourceids): void {
+        if (self::$uploads >= self::MAX_UPLOADS_PER_REQUEST) {
+            return;
+        }
+
+        // A file bit can take minutes to travel; the client caps it at 300s.
+        \core_php_time_limit::raise(330);
+
+        foreach ($resourceids as $resourceid) {
+            if (self::$uploads >= self::MAX_UPLOADS_PER_REQUEST) {
+                return;
+            }
+            self::$uploads++;
+
+            try {
+                $indexer->execute_now($resourceid);
+            } catch (blocked_exception | transport_exception $e) {
+                // execute_now() has already reverted the row, which for a
+                // failed untrack means "indexed" — true of the brain, but it
+                // hides that Moodle has moved on. Restore the content-changed
+                // status so the dashboard offers Re-index.
+                $indexer->reindex_resource($resourceid);
+                debugging(
+                    'local_tarsus: could not re-index changed content: ' . $e->getMessage(),
+                    DEBUG_DEVELOPER
+                );
+            }
+        }
+    }
+
+    /**
+     * Forget how much uploading this request has done (tests only).
+     *
+     * @return void
+     */
+    public static function reset_upload_budget(): void {
+        self::$uploads = 0;
     }
 
     /**
