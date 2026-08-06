@@ -83,7 +83,11 @@ class status {
             self::PENDING_DELETION,
         ],
         self::INDEXED => [self::PENDING_REINDEX, self::NOT_INDEXED, self::PENDING_DELETION],
+        // pending is reached mid-re-index: once the old bits are untracked the
+        // brain holds nothing, which is exactly what pending means. Recording
+        // it makes a failure of the following upload revert honestly.
         self::PENDING_REINDEX => [
+            self::PENDING,
             self::PENDING_CONFIRMATION,
             self::INDEXED,
             self::NOT_INDEXED,

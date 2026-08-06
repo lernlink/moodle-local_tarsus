@@ -252,6 +252,78 @@ final class indexer_test extends \advanced_testcase {
     }
 
     /**
+     * A re-index that fails after the old content was untracked must not
+     * claim the resource is still indexed: the brain holds nothing.
+     *
+     * @return void
+     */
+    public function test_failed_reindex_upload_reverts_to_notindexed(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $cm = $this->make_page($course->id, '<p>Nu</p>');
+
+        $failonupload = new class extends mock_client {
+            #[\Override]
+            public function track_resource(array $resource): array {
+                throw new \local_tarsus\client\transport_exception(500, 'mock upload failure');
+            }
+        };
+
+        $repo = new repository();
+        $indexer = new indexer(repo: $repo, tracker: new tracker(repo: $repo, client: $failonupload));
+        $resourceid = $indexer->index_cm($cm)[0];
+        $repo->mark_indexed($resourceid, 'bit-1', 'hash-1');
+
+        $this->assertTrue($indexer->reindex_resource($resourceid));
+
+        try {
+            $indexer->execute_now($resourceid);
+            $this->fail('Expected a transport exception.');
+        } catch (\local_tarsus\client\transport_exception $e) {
+            $this->assertSame(500, $e->httpstatus);
+        }
+
+        // The untrack succeeded, so the honest state is "nothing in the brain".
+        $this->assertSame(status::NOT_INDEXED, $repo->get($resourceid)->status);
+    }
+
+    /**
+     * A re-index that fails while untracking leaves the old content indexed.
+     *
+     * @return void
+     */
+    public function test_failed_reindex_untrack_keeps_indexed(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $cm = $this->make_page($course->id, '<p>Xi</p>');
+
+        $failonuntrack = new class extends mock_client {
+            #[\Override]
+            public function untrack_resource(array $resourceids): array {
+                throw new \local_tarsus\client\transport_exception(500, 'mock untrack failure');
+            }
+        };
+
+        $repo = new repository();
+        $indexer = new indexer(repo: $repo, tracker: new tracker(repo: $repo, client: $failonuntrack));
+        $resourceid = $indexer->index_cm($cm)[0];
+        $repo->mark_indexed($resourceid, 'bit-1', 'hash-1');
+
+        $this->assertTrue($indexer->reindex_resource($resourceid));
+
+        try {
+            $indexer->execute_now($resourceid);
+            $this->fail('Expected a transport exception.');
+        } catch (\local_tarsus\client\transport_exception $e) {
+            // Nothing was removed, so the previous version is still live.
+        }
+
+        $this->assertSame(status::INDEXED, $repo->get($resourceid)->status);
+    }
+
+    /**
      * refresh_cm re-indexes tracked content but never tracks new material.
      *
      * @return void

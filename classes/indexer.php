@@ -214,7 +214,10 @@ class indexer {
         try {
             $this->tracker->process($row);
         } catch (blocked_exception | transport_exception $e) {
-            $this->revert($row);
+            // Re-read: a re-index advances the row to pending once the old
+            // content is untracked, and the revert must act on where the
+            // sequence actually failed, not on where it started.
+            $this->revert($this->repo->get($resourceid) ?? $row);
             throw $e;
         }
     }

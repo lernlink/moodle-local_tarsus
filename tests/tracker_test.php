@@ -87,6 +87,89 @@ final class tracker_test extends \advanced_testcase {
     }
 
     /**
+     * Every upload untracks first, because the brain appends bits instead of
+     * replacing them and offers no way to remove a single bit.
+     *
+     * @return void
+     */
+    public function test_upload_untracks_before_tracking(): void {
+        $this->resetAfterTest(true);
+
+        $recorder = new class extends mock_client {
+            /** @var string[] The client calls made, in order. */
+            public array $calls = [];
+
+            #[\Override]
+            public function untrack_resource(array $resourceids): array {
+                $this->calls[] = 'untrack';
+                return parent::untrack_resource($resourceids);
+            }
+
+            #[\Override]
+            public function track_resource(array $resource): array {
+                $this->calls[] = 'track';
+                return parent::track_resource($resource);
+            }
+        };
+
+        [$tracker, $repo] = $this->make($recorder);
+        $repo->ensure(self::RID, 100, 'mod_resource', 42);
+        $repo->set_status(self::RID, status::PENDING);
+
+        $tracker->process($repo->get(self::RID));
+
+        $this->assertSame(['untrack', 'track'], $recorder->calls);
+    }
+
+    /**
+     * A re-index records that the brain is empty as soon as the old content
+     * is untracked, so a later failure cannot claim it is still live.
+     *
+     * @return void
+     */
+    public function test_reindex_marks_row_pending_once_untracked(): void {
+        $this->resetAfterTest(true);
+
+        $repo = new repository();
+        $client = new class ($repo, self::RID) extends mock_client {
+            /** @var string|null The row status observed at track time. */
+            public ?string $seen = null;
+
+            /**
+             * Constructor.
+             *
+             * @param repository $repo       Repository to observe.
+             * @param string     $resourceid The row to observe.
+             */
+            public function __construct(
+                /** @var repository Repository to observe. */
+                private repository $repo,
+                /** @var string The row to observe. */
+                private string $resourceid
+            ) {
+                parent::__construct();
+            }
+
+            #[\Override]
+            public function track_resource(array $resource): array {
+                // By now the old content is gone from the brain.
+                $this->seen = $this->repo->get($this->resourceid)->status;
+                return parent::track_resource($resource);
+            }
+        };
+
+        $tracker = new tracker(repo: $repo, client: $client);
+        $repo->ensure(self::RID, 100, 'mod_resource', 42);
+        $repo->set_status(self::RID, status::PENDING);
+        $repo->mark_indexed(self::RID, 'bit-1', 'hash-1');
+        $repo->set_status(self::RID, status::PENDING_REINDEX);
+
+        $tracker->process($repo->get(self::RID));
+
+        $this->assertSame(status::PENDING, $client->seen);
+    }
+
+    /**
      * A transport failure propagates to the caller; the row is not touched.
      *
      * The caller (indexer::execute_now) owns the revert — the tracker must

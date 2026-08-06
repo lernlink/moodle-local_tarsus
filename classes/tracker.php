@@ -90,8 +90,12 @@ class tracker {
     /**
      * Upload (or re-upload) a resource and record the outcome.
      *
-     * Re-index relies on add-before-remove on the brain side; the old bit is
-     * only untracked once the new content confirms as indexed.
+     * Tracking the same resource id twice does not replace the previous bits:
+     * the brain keeps both, and only whole resources can be untracked. So the
+     * upload is always preceded by an untrack, which clears any content the
+     * brain still holds under this id — the previous version on a re-index, or
+     * the remains of an upload whose response never reached us. Untracking an
+     * id the brain does not know is a documented no-op.
      *
      * @param \stdClass $row An index map row.
      * @return void
@@ -103,6 +107,17 @@ class tracker {
             ? $material->to_payload()
             : ['resource_id' => $row->resourceid, 'context_id' => (string) $row->contextid];
         $hash = $material ? $material->content_hash() : ($row->contenthash ?: sha1($row->resourceid));
+
+        $this->pipeline->execute(
+            fn() => $this->client->untrack_resource([$row->resourceid])
+        );
+
+        // The brain now holds nothing under this id. Record that before the
+        // upload: should it fail, the row must not keep claiming the previous
+        // version is live.
+        if ($row->status === status::PENDING_REINDEX) {
+            $this->repo->set_status($row->resourceid, status::PENDING);
+        }
 
         $result = $this->pipeline->execute(
             fn() => $this->client->track_resource($payload)
