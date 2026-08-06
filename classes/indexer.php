@@ -16,19 +16,23 @@
 
 namespace local_tarsus;
 
+use local_tarsus\client\transport_exception;
+use local_tarsus\guardrail\blocked_exception;
 use local_tarsus\index\reference_store;
 use local_tarsus\index\repository;
 use local_tarsus\index\status;
 use local_tarsus\material\material;
 use local_tarsus\material\resolver;
-use local_tarsus\task\process_resource_task;
 
 /**
- * Entry point that turns a course module into queued indexation work.
+ * Entry point that turns a course module into indexation work.
  *
  * Implements the decision half of §5: resolve materials, compute each content
- * hash, look up the local index map, and only queue an API call when the bit
- * is new or its content changed. An unchanged bit is skipped with no API call.
+ * hash, look up the local index map, and only mark a bit for an API call when
+ * it is new or its content changed. An unchanged bit is skipped with no API
+ * call. The marked work is then run synchronously via {@see execute_now()} —
+ * there is no background queue, so a failure reverts the row to its previous
+ * stable state and surfaces to the caller.
  *
  * @package    local_tarsus
  * @copyright  2026 lern.link GmbH
@@ -42,25 +46,28 @@ class indexer {
      * @param resolver|null        $resolver Material resolver.
      * @param repository|null      $repo     Index map repository.
      * @param reference_store|null $refs     Resource reference store.
+     * @param tracker|null         $tracker  The synchronous worker service.
      */
     public function __construct(
         private ?resolver $resolver = null,
         private ?repository $repo = null,
-        private ?reference_store $refs = null
+        private ?reference_store $refs = null,
+        private ?tracker $tracker = null
     ) {
         $this->resolver ??= new resolver();
         $this->repo ??= new repository();
         $this->refs ??= new reference_store();
+        $this->tracker ??= new tracker(repo: $this->repo, refs: $this->refs, resolver: $this->resolver);
     }
 
     /**
-     * Resolve a course module and queue any new or changed bits for indexing.
+     * Resolve a course module and mark any new or changed bits for indexing.
      *
      * Opt-in path (teacher action / bulk): tracks materials that are not yet
      * tracked, and re-indexes those whose content changed.
      *
      * @param \cm_info $cm The course module to index.
-     * @return string[] The resource ids that were queued (new or re-index).
+     * @return string[] The resource ids that were marked (new or re-index).
      */
     public function index_cm(\cm_info $cm): array {
         return $this->run($cm, false);
@@ -70,7 +77,7 @@ class indexer {
      * Index every supported activity in a course (opt-in bulk action).
      *
      * @param int $courseid The course id.
-     * @return string[] All resource ids queued across the course.
+     * @return string[] All resource ids marked across the course.
      */
     public function index_course(int $courseid): array {
         $queued = [];
@@ -90,7 +97,7 @@ class indexer {
      * already chosen to index, but never auto-tracks new material.
      *
      * @param \cm_info $cm The course module to refresh.
-     * @return string[] The resource ids queued for re-indexing.
+     * @return string[] The resource ids marked for re-indexing.
      */
     public function refresh_cm(\cm_info $cm): array {
         return $this->run($cm, true);
@@ -100,10 +107,10 @@ class indexer {
      * Index a single material identified by its namespaced resource id.
      *
      * Opt-in per-file action: resolves the material afresh, tracks it if new,
-     * and queues an upload when the content is new or changed.
+     * and marks an upload when the content is new or changed.
      *
      * @param string $resourceid The namespaced resource id.
-     * @return bool True when an indexation call was queued.
+     * @return bool True when an indexation call was marked.
      */
     public function index_resource(string $resourceid): bool {
         $material = $this->resolver->resolve_by_resource_id($resourceid);
@@ -117,7 +124,7 @@ class indexer {
      * Force a re-index of a single tracked resource (add-before-remove, §5).
      *
      * @param string $resourceid The namespaced resource id.
-     * @return bool True when a re-index was queued.
+     * @return bool True when a re-index was marked.
      */
     public function reindex_resource(string $resourceid): bool {
         $row = $this->repo->get($resourceid);
@@ -135,7 +142,6 @@ class indexer {
         }
 
         $this->repo->set_status($resourceid, status::PENDING_REINDEX);
-        process_resource_task::queue($resourceid);
         return true;
     }
 
@@ -145,7 +151,7 @@ class indexer {
      * The worker still runs the reference-count check before untracking.
      *
      * @param string $resourceid The namespaced resource id.
-     * @return bool True when a deletion was queued.
+     * @return bool True when a deletion was marked.
      */
     public function remove_resource(string $resourceid): bool {
         $row = $this->repo->get($resourceid);
@@ -157,8 +163,13 @@ class indexer {
             return false;
         }
 
+        // The teacher explicitly withdrew this owner's claim on the bit, so
+        // release its own reference — otherwise the worker's orphan check
+        // would see it and revert the deletion. References held by other
+        // owners still protect a shared bit.
+        $this->refs->remove($resourceid, $row->component, (int) $row->itemid);
+
         $this->repo->set_status($resourceid, status::PENDING_DELETION);
-        process_resource_task::queue($resourceid);
         return true;
     }
 
@@ -166,7 +177,7 @@ class indexer {
      * Retry a single resource stuck in the error state.
      *
      * @param string $resourceid The namespaced resource id.
-     * @return bool True when a retry was queued.
+     * @return bool True when a retry was marked.
      */
     public function retry_resource(string $resourceid): bool {
         $row = $this->repo->get($resourceid);
@@ -176,8 +187,63 @@ class indexer {
 
         $this->repo->reset_attempts($resourceid);
         $this->repo->set_status($resourceid, status::PENDING);
-        process_resource_task::queue($resourceid);
         return true;
+    }
+
+    /**
+     * Run the pending work of a resource synchronously, reverting on failure.
+     *
+     * This is the execution half of every teacher action: the row was just
+     * marked (pending / pendingreindex / pendingdeletion) and the API call
+     * happens here, in the acting request. When a guardrail or the transport
+     * refuses, the row returns to its previous stable state — there is no
+     * queue to pick it up later, so it must never be left mid-flight — and
+     * the failure propagates so the caller can show it.
+     *
+     * @param string $resourceid The namespaced resource id.
+     * @return void
+     * @throws blocked_exception When a guardrail refuses the call.
+     * @throws transport_exception When the call fails at the transport level.
+     */
+    public function execute_now(string $resourceid): void {
+        $row = $this->repo->get($resourceid);
+        if ($row === null) {
+            return;
+        }
+
+        try {
+            $this->tracker->process($row);
+        } catch (blocked_exception | transport_exception $e) {
+            $this->revert($row);
+            throw $e;
+        }
+    }
+
+    /**
+     * Return a row that failed mid-action to its previous stable state.
+     *
+     * @param \stdClass $row The row, still carrying its transient status.
+     * @return void
+     */
+    private function revert(\stdClass $row): void {
+        switch ($row->status) {
+            case status::PENDING:
+                // A first upload failed: back to square one, Index reappears.
+                $this->repo->set_status($row->resourceid, status::NOT_INDEXED);
+                break;
+            case status::PENDING_REINDEX:
+                // The old content is still live in the brain; keep the old
+                // hash so the change stays detectable.
+                $this->repo->set_status($row->resourceid, status::INDEXED);
+                break;
+            case status::PENDING_DELETION:
+                // The bit is still in the brain: restore this owner's claim.
+                $this->refs->add($row->resourceid, $row->component, (int) $row->itemid, (int) $row->contextid);
+                $this->repo->set_status($row->resourceid, status::INDEXED);
+                break;
+            default:
+                break;
+        }
     }
 
     /**
@@ -185,7 +251,7 @@ class indexer {
      *
      * @param \cm_info $cm          The course module.
      * @param bool     $onlytracked When true, ignore materials with no index row.
-     * @return string[] The resource ids that were queued.
+     * @return string[] The resource ids that were marked.
      */
     private function run(\cm_info $cm, bool $onlytracked): array {
         $queued = [];
@@ -198,11 +264,11 @@ class indexer {
     }
 
     /**
-     * Decide and queue a single material.
+     * Decide and mark a single material.
      *
      * @param material $material    The extracted material.
      * @param bool     $onlytracked When true, skip materials that have no row yet.
-     * @return bool True when an indexation call was queued.
+     * @return bool True when an indexation call was marked.
      */
     private function index_material(material $material, bool $onlytracked = false): bool {
         $resourceid = $material->resourceid;
@@ -229,7 +295,6 @@ class indexer {
         }
 
         $this->repo->set_status($resourceid, $target);
-        process_resource_task::queue($resourceid);
         return true;
     }
 

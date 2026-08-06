@@ -16,6 +16,7 @@
 
 namespace local_tarsus;
 
+use local_tarsus\client\mock_client;
 use local_tarsus\index\reference_store;
 use local_tarsus\index\repository;
 use local_tarsus\index\status;
@@ -136,6 +137,118 @@ final class indexer_test extends \advanced_testcase {
         foreach ($queued as $resourceid) {
             $this->assertSame(status::PENDING, (new repository())->get($resourceid)->status);
         }
+    }
+
+    /**
+     * Removing a resource releases the owner's own reference, so the
+     * deletion actually reaches the brain instead of being reverted by
+     * the orphan check tripping over the owner's own claim.
+     *
+     * @return void
+     */
+    public function test_remove_resource_releases_own_reference(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $cm = $this->make_page($course->id, '<p>Iota</p>');
+
+        $indexer = new indexer();
+        $resourceid = $indexer->index_cm($cm)[0];
+        $repo = new repository();
+        $repo->mark_indexed($resourceid, 'bit-1', 'hash-1');
+
+        $this->assertTrue($indexer->remove_resource($resourceid));
+        $this->assertSame(status::PENDING_DELETION, $repo->get($resourceid)->status);
+        $this->assertFalse((new reference_store())->has_references($resourceid));
+
+        // The worker now sees an orphan and completes the untrack.
+        (new tracker(repo: $repo, client: new mock_client()))->process($repo->get($resourceid));
+        $this->assertNull($repo->get($resourceid));
+    }
+
+    /**
+     * Removal still spares a bit that another live owner references.
+     *
+     * @return void
+     */
+    public function test_remove_resource_spares_shared_bit(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $cm = $this->make_page($course->id, '<p>Kappa</p>');
+
+        $indexer = new indexer();
+        $resourceid = $indexer->index_cm($cm)[0];
+        $repo = new repository();
+        $repo->mark_indexed($resourceid, 'bit-1', 'hash-1');
+
+        // A sibling activity also references the same bit.
+        (new reference_store())->add($resourceid, 'mod_page', 999999, 100);
+
+        $this->assertTrue($indexer->remove_resource($resourceid));
+
+        // The worker refuses the untrack and the bit stays indexed.
+        (new tracker(repo: $repo, client: new mock_client()))->process($repo->get($resourceid));
+        $this->assertSame(status::INDEXED, $repo->get($resourceid)->status);
+    }
+
+    /**
+     * A failed synchronous upload reverts the row to not indexed.
+     *
+     * With no background queue nothing may stay mid-flight: the teacher sees
+     * the failure and the Index button reappears.
+     *
+     * @return void
+     */
+    public function test_execute_now_reverts_failed_upload(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $cm = $this->make_page($course->id, '<p>Lambda</p>');
+
+        $repo = new repository();
+        $failingtracker = new tracker(repo: $repo, client: new mock_client(simulatestatus: 500));
+        $indexer = new indexer(repo: $repo, tracker: $failingtracker);
+        $resourceid = $indexer->index_cm($cm)[0];
+
+        try {
+            $indexer->execute_now($resourceid);
+            $this->fail('Expected a transport exception.');
+        } catch (\local_tarsus\client\transport_exception $e) {
+            $this->assertSame(500, $e->httpstatus);
+        }
+
+        $this->assertSame(status::NOT_INDEXED, $repo->get($resourceid)->status);
+    }
+
+    /**
+     * A failed synchronous deletion restores the row and the owner's claim.
+     *
+     * @return void
+     */
+    public function test_execute_now_reverts_failed_deletion(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $cm = $this->make_page($course->id, '<p>Mu</p>');
+
+        $repo = new repository();
+        $failingtracker = new tracker(repo: $repo, client: new mock_client(simulatestatus: 500));
+        $indexer = new indexer(repo: $repo, tracker: $failingtracker);
+        $resourceid = $indexer->index_cm($cm)[0];
+        $repo->mark_indexed($resourceid, 'bit-1', 'hash-1');
+
+        $this->assertTrue($indexer->remove_resource($resourceid));
+
+        try {
+            $indexer->execute_now($resourceid);
+            $this->fail('Expected a transport exception.');
+        } catch (\local_tarsus\client\transport_exception $e) {
+            // The bit is still in the brain, so the row must say so again.
+        }
+
+        $this->assertSame(status::INDEXED, $repo->get($resourceid)->status);
+        $this->assertTrue((new reference_store())->has_references($resourceid));
     }
 
     /**

@@ -27,13 +27,13 @@ use local_tarsus\index\status;
 use local_tarsus\material\resolver;
 
 /**
- * Orchestrates one unit of indexation work against the brain.
+ * Orchestrates one unit of indexation work against the brain, synchronously.
  *
- * The tasks are thin: they pick due rows and hand each to this service, which
- * runs the right client call through the guardrails pipeline and advances the
- * index state machine. All credit spend is metered; all transport failures
- * feed the retry/backoff budget; guardrail blocks simply leave the row for a
- * later run (the queue holds).
+ * Runs the right client call through the guardrails pipeline and advances the
+ * index state machine. All credit spend is metered. Failures are not absorbed:
+ * a guardrail block or transport error propagates to the caller, which decides
+ * how to present it and how to revert the row ({@see indexer::execute_now()}).
+ * There is no background queue — every run happens in the acting request.
  *
  * @package    local_tarsus
  * @copyright  2026 lern.link GmbH
@@ -71,10 +71,12 @@ class tracker {
     }
 
     /**
-     * Route a due row to the handler for its status.
+     * Route a row to the handler for its status.
      *
      * @param \stdClass $row An index map row.
      * @return void
+     * @throws blocked_exception When a guardrail refuses the call.
+     * @throws transport_exception When the call fails at the transport level.
      */
     public function process(\stdClass $row): void {
         match ($row->status) {
@@ -95,23 +97,16 @@ class tracker {
      * @return void
      */
     private function process_upload(\stdClass $row): void {
-        // Re-extract from current state: cron may run long after the trigger.
+        // Re-extract from current state so the upload carries what is on disk now.
         $material = $this->resolver->resolve_by_resource_id($row->resourceid);
         $payload = $material
             ? $material->to_payload()
             : ['resource_id' => $row->resourceid, 'context_id' => (string) $row->contextid];
         $hash = $material ? $material->content_hash() : ($row->contenthash ?: sha1($row->resourceid));
 
-        try {
-            $result = $this->pipeline->execute(
-                fn() => $this->client->track_resource($payload)
-            );
-        } catch (blocked_exception $e) {
-            return; // Guardrail held the call; retry on a later run.
-        } catch (transport_exception $e) {
-            $this->repo->record_failure($row->resourceid);
-            return;
-        }
+        $result = $this->pipeline->execute(
+            fn() => $this->client->track_resource($payload)
+        );
 
         $this->usage->record((int) $row->contextid, 0, 'track', (int) ($result['credits'] ?? 0));
 
@@ -134,16 +129,9 @@ class tracker {
      * @return void
      */
     private function process_confirmation(\stdClass $row): void {
-        try {
-            $result = $this->pipeline->execute(
-                fn() => $this->client->get_resource_status($row->resourceid)
-            );
-        } catch (blocked_exception $e) {
-            return;
-        } catch (transport_exception $e) {
-            $this->repo->record_failure($row->resourceid);
-            return;
-        }
+        $result = $this->pipeline->execute(
+            fn() => $this->client->get_resource_status($row->resourceid)
+        );
 
         if (($result['status'] ?? '') === status::INDEXED) {
             // The upload persisted the hash of what was sent; recomputing it
@@ -157,10 +145,9 @@ class tracker {
             if (status::can_transition($row->status, status::NOT_INDEXED)) {
                 $this->repo->set_status($row->resourceid, status::NOT_INDEXED);
             }
-        } else {
-            // Not confirmed yet: poll again with backoff; error when exhausted.
-            $this->repo->record_failure($row->resourceid);
         }
+        // Still ingesting: leave the row awaiting confirmation. The next page
+        // sync (or an explicit action) will ask again — there is no poller.
     }
 
     /**
@@ -178,16 +165,9 @@ class tracker {
             return;
         }
 
-        try {
-            $this->pipeline->execute(
-                fn() => $this->client->untrack_resource([$row->resourceid])
-            );
-        } catch (blocked_exception $e) {
-            return;
-        } catch (transport_exception $e) {
-            $this->repo->record_failure($row->resourceid);
-            return;
-        }
+        $this->pipeline->execute(
+            fn() => $this->client->untrack_resource([$row->resourceid])
+        );
 
         $this->repo->delete($row->resourceid);
     }

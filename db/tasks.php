@@ -24,23 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$tasks = [
-    [
-        'classname' => 'local_tarsus\task\process_queue_task',
-        'blocking' => 0,
-        'minute' => '*',
-        'hour' => '*',
-        'day' => '*',
-        'month' => '*',
-        'dayofweek' => '*',
-    ],
-    [
-        'classname' => 'local_tarsus\task\reconcile_task',
-        'blocking' => 0,
-        'minute' => '*/30',
-        'hour' => '*',
-        'day' => '*',
-        'month' => '*',
-        'dayofweek' => '*',
-    ],
-];
+// No scheduled tasks: all indexation work runs synchronously in the acting
+// request, and the dashboard reconciles against the brain on open / on the
+// explicit sync action. Keeping the file (empty) so an upgrade removes the
+// previously registered tasks.
+$tasks = [];

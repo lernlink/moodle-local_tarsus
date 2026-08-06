@@ -88,7 +88,7 @@ $string['status:notindexed'] = 'Not indexed';
 $string['status:pending'] = 'Pending';
 $string['status:pendingconfirmation'] = 'Awaiting confirmation';
 $string['status:indexed'] = 'Indexed';
-$string['status:pendingreindex'] = 'Re-indexing';
+$string['status:pendingreindex'] = 'Content changed';
 $string['status:pendingdeletion'] = 'Pending removal';
 $string['status:error'] = 'Error';
 

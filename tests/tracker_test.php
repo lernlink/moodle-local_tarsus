@@ -87,23 +87,28 @@ final class tracker_test extends \advanced_testcase {
     }
 
     /**
-     * A transport failure records an attempt and schedules a retry.
+     * A transport failure propagates to the caller; the row is not touched.
+     *
+     * The caller (indexer::execute_now) owns the revert — the tracker must
+     * leave the row exactly as it found it.
      *
      * @return void
      */
-    public function test_upload_transport_failure_records_attempt(): void {
+    public function test_upload_transport_failure_propagates(): void {
         $this->resetAfterTest(true);
 
         [$tracker, $repo] = $this->make(new mock_client(simulatestatus: 500));
         $repo->ensure(self::RID, 100, 'mod_resource', 42);
         $repo->set_status(self::RID, status::PENDING);
 
-        $tracker->process($repo->get(self::RID));
+        try {
+            $tracker->process($repo->get(self::RID));
+            $this->fail('Expected a transport exception.');
+        } catch (\local_tarsus\client\transport_exception $e) {
+            $this->assertSame(500, $e->httpstatus);
+        }
 
-        $row = $repo->get(self::RID);
-        $this->assertSame(1, (int) $row->attempts);
-        $this->assertGreaterThan(time(), (int) $row->nextretry);
-        $this->assertSame(status::PENDING, $row->status);
+        $this->assertSame(status::PENDING, $repo->get(self::RID)->status);
     }
 
     /**
@@ -205,11 +210,11 @@ final class tracker_test extends \advanced_testcase {
     }
 
     /**
-     * The kill switch blocks the call and leaves the row untouched.
+     * The kill switch blocks the call; the block propagates to the caller.
      *
      * @return void
      */
-    public function test_killswitch_holds_the_queue(): void {
+    public function test_killswitch_blocks_and_propagates(): void {
         $this->resetAfterTest(true);
 
         set_config('killswitch', 1, 'local_tarsus');
@@ -218,7 +223,12 @@ final class tracker_test extends \advanced_testcase {
         $repo->ensure(self::RID, 100, 'mod_resource', 42);
         $repo->set_status(self::RID, status::PENDING);
 
-        $tracker->process($repo->get(self::RID));
+        try {
+            $tracker->process($repo->get(self::RID));
+            $this->fail('Expected a guardrail block.');
+        } catch (\local_tarsus\guardrail\blocked_exception $e) {
+            $this->assertSame('killswitch', $e->reason);
+        }
 
         $this->assertSame(status::PENDING, $repo->get(self::RID)->status);
     }

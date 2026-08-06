@@ -64,7 +64,15 @@ class status {
     /** @var array<string, string[]> Allowed transitions from each status. */
     private const TRANSITIONS = [
         self::NOT_INDEXED => [self::PENDING, self::PENDING_DELETION],
-        self::PENDING => [self::PENDING_CONFIRMATION, self::INDEXED, self::ERROR, self::PENDING_DELETION],
+        // notindexed is the revert target when a synchronous upload fails:
+        // with no background queue the row must never stay mid-flight.
+        self::PENDING => [
+            self::PENDING_CONFIRMATION,
+            self::INDEXED,
+            self::ERROR,
+            self::PENDING_DELETION,
+            self::NOT_INDEXED,
+        ],
         // The brain is the source of truth: it may report a resource as simply
         // absent ("failed"), which drops the row back to the start state.
         self::PENDING_CONFIRMATION => [
