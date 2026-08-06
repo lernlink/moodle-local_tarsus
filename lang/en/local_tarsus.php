@@ -36,6 +36,15 @@ $string['brainid_desc'] = 'The single Tarsus brain used by this site.';
 $string['baseurl'] = 'Base URL';
 $string['baseurl_desc'] = 'The Tarsus API base URL (data residency: Germany). Enter only the host, without the /api/v1/... path.';
 
+// Unfinished deletions.
+$string['deletions'] = 'Tarsus deletions';
+$string['deletions_none'] = 'Everything removed from this site has been removed from the brain.';
+$string['deletions_pending'] = 'The brain has not confirmed {$a} deletion(s). This happens when it is unreachable at the moment content is deleted; the content is gone from Moodle but may still answer questions.';
+$string['deletions_resource'] = 'Resource';
+$string['deletions_since'] = 'Awaiting removal since';
+$string['deletions_retry'] = 'Retry now';
+$string['deletions_retried'] = '{$a} deletion(s) completed.';
+
 // Brain picker.
 $string['brains'] = 'Tarsus brains';
 $string['brains_desc'] = 'Every brain reachable by the API key above, with its state. <a href="{$a}">Open the brain list</a> to pick the one this site uses.';

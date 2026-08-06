@@ -37,6 +37,12 @@ if ($hassiteconfig) {
         new moodle_url('/local/tarsus/brains.php')
     ));
 
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_tarsus_deletions',
+        get_string('deletions', 'local_tarsus'),
+        new moodle_url('/local/tarsus/deletions.php')
+    ));
+
     $settings->add(new admin_setting_heading(
         'local_tarsus/connection',
         get_string('settings_connection', 'local_tarsus'),

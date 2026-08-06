@@ -51,6 +51,15 @@ $string['creditbudget_desc'] = 'Maximale aiCredits pro Zeitraum, bevor Aufrufe a
 // Fehler.
 $string['transporterror'] = 'Tarsus-Übertragungsfehler (HTTP {$a}).';
 
+// Nicht abgeschlossene Löschungen.
+$string['deletions'] = 'Tarsus-Löschungen';
+$string['deletions_none'] = 'Alles, was auf dieser Website gelöscht wurde, ist auch im Brain gelöscht.';
+$string['deletions_pending'] = 'Das Brain hat {$a} Löschung(en) nicht bestätigt. Das passiert, wenn es im Moment des Löschens nicht erreichbar ist: Der Inhalt ist aus Moodle verschwunden, kann aber weiterhin Fragen beantworten.';
+$string['deletions_resource'] = 'Ressource';
+$string['deletions_since'] = 'Wartet auf Entfernung seit';
+$string['deletions_retry'] = 'Jetzt erneut versuchen';
+$string['deletions_retried'] = '{$a} Löschung(en) abgeschlossen.';
+
 // Brain-Auswahl.
 $string['brains'] = 'Tarsus-Brains';
 $string['brains_desc'] = 'Alle Brains, die mit dem obigen API-Schlüssel erreichbar sind, samt Status. <a href="{$a}">Brain-Liste öffnen</a>, um das Brain dieser Website auszuwählen.';
