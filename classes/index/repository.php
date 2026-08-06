@@ -257,6 +257,29 @@ class repository {
     }
 
     /**
+     * All rows belonging to a context (i.e. to one course).
+     *
+     * @param int $contextid The owning course context id.
+     * @return \stdClass[] Matching rows.
+     */
+    public function get_by_context(int $contextid): array {
+        global $DB;
+        return $DB->get_records(self::TABLE, ['contextid' => $contextid]);
+    }
+
+    /**
+     * All rows owned by one activity.
+     *
+     * @param string $component Frankenstyle component of the owner.
+     * @param int    $itemid    Owner item id (course module id).
+     * @return \stdClass[] Matching rows.
+     */
+    public function get_by_owner(string $component, int $itemid): array {
+        global $DB;
+        return $DB->get_records(self::TABLE, ['component' => $component, 'itemid' => $itemid]);
+    }
+
+    /**
      * Delete a row (e.g. after the source module is gone and bits untracked).
      *
      * @param string $resourceid Namespaced resource id.

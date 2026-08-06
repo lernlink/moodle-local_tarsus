@@ -31,11 +31,14 @@ use local_tarsus\index\status;
 final class observer_test extends \advanced_testcase {
 
     /**
-     * Deleting a module frees its references and queues orphans for deletion.
+     * Deleting a module untracks its orphaned bits there and then.
+     *
+     * The activity is gone from the dashboard, so nothing could ever clean
+     * this up later: the row must not survive the deletion.
      *
      * @return void
      */
-    public function test_module_deletion_queues_orphan(): void {
+    public function test_module_deletion_untracks_orphan(): void {
         $this->resetAfterTest(true);
 
         $course = $this->getDataGenerator()->create_course();
@@ -54,7 +57,74 @@ final class observer_test extends \advanced_testcase {
         course_delete_module($page->cmid);
 
         $this->assertFalse($refs->has_references($resourceid));
+        $this->assertNull($repo->get($resourceid));
+    }
+
+    /**
+     * A brain failure during deletion leaves the row marked for a later sweep
+     * and never breaks the Moodle-side deletion.
+     *
+     * @return void
+     */
+    public function test_module_deletion_survives_a_blocked_call(): void {
+        global $DB;
+        $this->resetAfterTest(true);
+
+        set_config('killswitch', 1, 'local_tarsus');
+
+        $course = $this->getDataGenerator()->create_course();
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $context = \context_module::instance($page->cmid);
+        $resourceid = 'site:1:mod_page:' . $page->id;
+
+        $repo = new repository();
+        $repo->ensure($resourceid, $context->id, 'mod_page', $page->id);
+        $repo->set_status($resourceid, status::PENDING);
+        $repo->mark_indexed($resourceid, 'mock-bit', sha1($resourceid));
+        (new reference_store())->add($resourceid, 'mod_page', $page->cmid, $context->id);
+
+        course_delete_module($page->cmid);
+
+        // Moodle 5.2 also deprecates course_delete_module() itself, so assert
+        // on the message rather than on how many notices were emitted.
+        $messages = array_map(
+            static fn(\stdClass $entry): string => $entry->message,
+            $this->getDebuggingMessages()
+        );
+        $this->resetDebugging();
+        $this->assertStringContainsString('could not untrack deleted content', implode("\n", $messages));
+
+        // Moodle deleted the activity; the bit is still in the brain and the
+        // row records that so it can be retried.
+        $this->assertFalse(
+            $DB->record_exists('course_modules', ['id' => $page->cmid]),
+            'the module should be gone regardless of the brain'
+        );
         $this->assertSame(status::PENDING_DELETION, $repo->get($resourceid)->status);
+    }
+
+    /**
+     * Deleting a course clears everything it had in the brain.
+     *
+     * @return void
+     */
+    public function test_course_deletion_clears_the_whole_course(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+        $resourceid = 'site:1:mod_page:orphan-of-course';
+
+        $repo = new repository();
+        $repo->ensure($resourceid, $context->id, 'mod_page', 999999);
+        $repo->set_status($resourceid, status::PENDING);
+        $repo->mark_indexed($resourceid, 'mock-bit', sha1($resourceid));
+        (new reference_store())->add($resourceid, 'mod_page', 999999, $context->id);
+
+        delete_course($course->id, false);
+
+        $this->assertNull($repo->get($resourceid));
+        $this->assertFalse((new reference_store())->has_references($resourceid));
     }
 
     /**

@@ -172,18 +172,62 @@ class tracker {
      * @return void
      */
     private function process_deletion(\stdClass $row): void {
-        if (!$this->refs->safe_to_untrack($row->resourceid)) {
-            // Another live owner still references it: keep it indexed.
-            if (status::can_transition($row->status, status::INDEXED)) {
-                $this->repo->set_status($row->resourceid, status::INDEXED);
+        $this->process_deletions([$row]);
+    }
+
+    /**
+     * Untrack every orphaned row of a set in a single call.
+     *
+     * Deleting an activity frees all of its bits at once, so they travel in
+     * one request rather than one per file.
+     *
+     * @param \stdClass[] $rows Index map rows marked for deletion.
+     * @return void
+     * @throws blocked_exception When a guardrail refuses the call.
+     * @throws transport_exception When the call fails at the transport level.
+     */
+    public function process_deletions(array $rows): void {
+        $resourceids = [];
+
+        foreach ($rows as $row) {
+            if (!$this->refs->safe_to_untrack($row->resourceid)) {
+                // Another live owner still references it: keep it indexed.
+                if (status::can_transition($row->status, status::INDEXED)) {
+                    $this->repo->set_status($row->resourceid, status::INDEXED);
+                }
+                continue;
             }
+            $resourceids[] = $row->resourceid;
+        }
+
+        if ($resourceids === []) {
             return;
         }
 
         $this->pipeline->execute(
-            fn() => $this->client->untrack_resource([$row->resourceid])
+            fn() => $this->client->untrack_resource($resourceids)
         );
 
-        $this->repo->delete($row->resourceid);
+        foreach ($resourceids as $resourceid) {
+            $this->refs->remove_all_for_resource($resourceid);
+            $this->repo->delete($resourceid);
+        }
+    }
+
+    /**
+     * Remove everything the brain holds for one course, in a single call.
+     *
+     * Every bit is filed under its course context id as the brain-side asset
+     * id, so a deleted course does not need one call per resource.
+     *
+     * @param string $assetid The course context id used as the asset id.
+     * @return void
+     * @throws blocked_exception When a guardrail refuses the call.
+     * @throws transport_exception When the call fails at the transport level.
+     */
+    public function untrack_asset(string $assetid): void {
+        $this->pipeline->execute(
+            fn() => $this->client->untrack_assets([$assetid])
+        );
     }
 }

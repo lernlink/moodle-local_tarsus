@@ -61,6 +61,18 @@ interface client_interface {
     public function untrack_resource(array $resourceids): array;
 
     /**
+     * Untrack every resource filed under the given assets.
+     *
+     * The plugin files each bit under its course context id, so one asset is
+     * one course: deleting a course costs a single call instead of one per
+     * resource.
+     *
+     * @param string[] $assetids Asset ids (course context ids) to clear.
+     * @return array Per-asset removal result.
+     */
+    public function untrack_assets(array $assetids): array;
+
+    /**
      * Read the brain-side status of a tracked resource.
      *
      * @param string $resourceid Namespaced resource id.

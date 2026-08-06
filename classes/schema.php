@@ -57,6 +57,15 @@ class schema {
         foreach (self::table_definitions() as $table) {
             if (!$dbman->table_exists($table)) {
                 $dbman->create_table($table);
+                continue;
+            }
+
+            // The table predates this definition: add whatever indexes were
+            // introduced since, so an upgraded site matches a fresh install.
+            foreach ($table->getIndexes() as $index) {
+                if (!$dbman->index_exists($table, $index)) {
+                    $dbman->add_index($table, $index);
+                }
             }
         }
     }
@@ -99,6 +108,9 @@ class schema {
         $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
         $table->add_index('resourceid', XMLDB_INDEX_UNIQUE, ['resourceid']);
         $table->add_index('status', XMLDB_INDEX_NOTUNIQUE, ['status']);
+        // Read on every module event, and when a course is deleted.
+        $table->add_index('owner', XMLDB_INDEX_NOTUNIQUE, ['component', 'itemid']);
+        $table->add_index('contextid', XMLDB_INDEX_NOTUNIQUE, ['contextid']);
 
         return $table;
     }

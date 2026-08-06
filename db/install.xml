@@ -25,6 +25,8 @@
       <INDEXES>
         <INDEX NAME="resourceid" UNIQUE="true" FIELDS="resourceid"/>
         <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="owner" UNIQUE="false" FIELDS="component, itemid" COMMENT="Rows of one activity, read on every module event."/>
+        <INDEX NAME="contextid" UNIQUE="false" FIELDS="contextid" COMMENT="Rows of one course, read when a course is deleted."/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="local_tarsus_guardrail" COMMENT="Guardrail state: circuit breaker, token bucket and credit budget. Mutated under a lock by concurrent CRON workers.">

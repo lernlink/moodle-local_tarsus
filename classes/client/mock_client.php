@@ -98,6 +98,18 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function untrack_assets(array $assetids): array {
+        $this->maybe_fail();
+
+        $result = [];
+        foreach ($assetids as $assetid) {
+            $result[$assetid] = 'removed';
+        }
+
+        return $result;
+    }
+
+    #[\Override]
     public function get_resource_status(string $resourceid): array {
         $this->maybe_fail();
 

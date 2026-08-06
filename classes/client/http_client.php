@@ -117,6 +117,27 @@ class http_client implements client_interface {
     }
 
     #[\Override]
+    public function untrack_assets(array $assetids): array {
+        $result = [];
+
+        foreach ($this->chunk($assetids) as $chunk) {
+            $body = $this->send('DELETE', 'access/untrack/multiple-assets', [
+                'brain_id' => $this->brain(),
+                'asset_ids' => json_encode(array_values($chunk)),
+            ]);
+
+            $untracked = $body['access']['untracked']['asset_ids'] ?? [];
+            $untracked = is_array($untracked) ? array_flip($untracked) : [];
+
+            foreach ($chunk as $assetid) {
+                $result[$assetid] = isset($untracked[$assetid]) ? 'removed' : 'unknown';
+            }
+        }
+
+        return $result;
+    }
+
+    #[\Override]
     public function get_resource_status(string $resourceid): array {
         // The plural endpoint reports a brain-side status; the singular one does not.
         $checked = $this->check_tracked_resources([$resourceid]);

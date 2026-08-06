@@ -98,6 +98,21 @@ class reference_store {
     }
 
     /**
+     * Drop every reference to a resource, whoever holds it.
+     *
+     * Used once the bit is gone from the brain, so the bookkeeping does not
+     * outlive what it describes.
+     *
+     * @param string $resourceid Namespaced resource id.
+     * @return void
+     */
+    public function remove_all_for_resource(string $resourceid): void {
+        global $DB;
+
+        $DB->delete_records(self::TABLE, ['resourceid' => $resourceid]);
+    }
+
+    /**
      * How many owners reference a resource.
      *
      * @param string $resourceid Namespaced resource id.

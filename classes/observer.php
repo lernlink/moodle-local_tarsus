@@ -16,17 +16,26 @@
 
 namespace local_tarsus;
 
+use core\event\course_deleted;
 use core\event\course_module_deleted;
 use core\event\course_module_updated;
+use local_tarsus\client\transport_exception;
+use local_tarsus\guardrail\blocked_exception;
 use local_tarsus\index\reference_store;
 use local_tarsus\index\repository;
 use local_tarsus\index\status;
 
 /**
- * Event observers that keep the index map consistent (push side of §5).
+ * Event observers that keep the brain in step with Moodle (push side of §5).
  *
- * The scheduled reconcile task is the pull-based safety net; these observers
- * react immediately so deletions don't leave orphaned references behind.
+ * Content leaving Moodle must leave the brain with it, and there is no queue
+ * to defer that to: once the activity is gone it no longer appears on the
+ * dashboard, so no teacher action can ever clean it up. The observers
+ * therefore untrack immediately.
+ *
+ * They never let a brain failure break the Moodle operation that triggered
+ * them: a deletion that could not be delivered stays recorded as
+ * pendingdeletion, which is the durable record a later sweep acts on.
  *
  * @package    local_tarsus
  * @copyright  2026 lern.link GmbH
@@ -35,7 +44,7 @@ use local_tarsus\index\status;
 class observer {
 
     /**
-     * Drop an owner's references on module deletion and queue orphans for removal.
+     * Remove an activity's bits from the brain as the activity is deleted.
      *
      * @param course_module_deleted $event The triggered event.
      * @return void
@@ -53,6 +62,7 @@ class observer {
         }
 
         $repo = new repository();
+        $doomed = [];
         foreach ($freed as $resourceid) {
             if ($refs->has_references($resourceid)) {
                 // Still referenced by another live owner; leave it indexed.
@@ -61,7 +71,73 @@ class observer {
             $row = $repo->get($resourceid);
             if ($row !== null && status::can_transition($row->status, status::PENDING_DELETION)) {
                 $repo->set_status($resourceid, status::PENDING_DELETION);
+                $doomed[] = $repo->get($resourceid);
             }
+        }
+
+        if ($doomed === []) {
+            return;
+        }
+
+        // One call for the whole activity, however many files it held.
+        self::deliver(fn() => (new tracker())->process_deletions($doomed));
+    }
+
+    /**
+     * Remove everything the brain holds for a course as the course is deleted.
+     *
+     * Bits are filed under the course context id as their asset id, so this
+     * costs one call no matter how large the course was.
+     *
+     * @param course_deleted $event The triggered event.
+     * @return void
+     */
+    public static function course_deleted(course_deleted $event): void {
+        $contextid = (int) $event->contextid;
+        if ($contextid <= 0) {
+            return;
+        }
+
+        $repo = new repository();
+        $rows = $repo->get_by_context($contextid);
+        if ($rows === []) {
+            return;
+        }
+
+        foreach ($rows as $row) {
+            if (status::can_transition($row->status, status::PENDING_DELETION)) {
+                $repo->set_status($row->resourceid, status::PENDING_DELETION);
+            }
+        }
+
+        if (!self::deliver(fn() => (new tracker())->untrack_asset((string) $contextid))) {
+            return; // Rows stay marked so the deletion can be retried.
+        }
+
+        $refs = new reference_store();
+        foreach ($rows as $row) {
+            $refs->remove_all_for_resource($row->resourceid);
+            $repo->delete($row->resourceid);
+        }
+    }
+
+    /**
+     * Run an outbound call, never letting its failure escape into Moodle.
+     *
+     * @param callable $call The call to attempt.
+     * @return bool True when it went through.
+     */
+    private static function deliver(callable $call): bool {
+        try {
+            $call();
+            return true;
+        } catch (blocked_exception | transport_exception $e) {
+            // The Moodle-side deletion has already happened and must stand.
+            debugging(
+                'local_tarsus: could not untrack deleted content: ' . $e->getMessage(),
+                DEBUG_DEVELOPER
+            );
+            return false;
         }
     }
 

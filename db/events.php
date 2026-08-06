@@ -33,4 +33,8 @@ $observers = [
         'eventname' => '\core\event\course_module_updated',
         'callback' => '\local_tarsus\observer::course_module_updated',
     ],
+    [
+        'eventname' => '\core\event\course_deleted',
+        'callback' => '\local_tarsus\observer::course_deleted',
+    ],
 ];
