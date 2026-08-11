@@ -38,11 +38,17 @@ interface client_interface {
     /**
      * Grounded retrieval: answer a query from tracked brain content.
      *
-     * @param string $contextid Namespaced context scoping retrieval.
-     * @param string $query     The learner question.
-     * @return array Result with at least 'answer' and 'sources'.
+     * Retrieval is scoped by an explicit list of resource ids: only those may
+     * ground the answer. The brain treats an empty list as "no restriction",
+     * which would leak other courses' content on the shared brain — so callers
+     * must refuse locally instead of ever passing an empty list.
+     *
+     * @param string   $query              The learner question.
+     * @param string   $userid             Pseudonymised user id (analytics; never a real identity).
+     * @param string[] $allowedresourceids Non-empty list of resource ids allowed to ground the answer.
+     * @return array Result with 'answer', 'answered', 'sources' and 'credits'.
      */
-    public function search_grounded(string $contextid, string $query): array;
+    public function search_grounded(string $query, string $userid, array $allowedresourceids): array;
 
     /**
      * Track (index) a resource into the brain.

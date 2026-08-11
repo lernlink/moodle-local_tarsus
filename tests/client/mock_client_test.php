@@ -34,11 +34,20 @@ final class mock_client_test extends \advanced_testcase {
      */
     public function test_search_grounded_returns_sources(): void {
         $client = new mock_client();
-        $result = $client->search_grounded('site:1:course:2', 'What is photosynthesis?');
+        $result = $client->search_grounded(
+            'What is photosynthesis?',
+            'pseudonym-1',
+            ['site:1:mod_page:2:main', 'site:1:mod_page:3:main']
+        );
 
         $this->assertArrayHasKey('answer', $result);
-        $this->assertArrayHasKey('sources', $result);
-        $this->assertNotEmpty($result['sources']);
+        $this->assertTrue($result['answered']);
+        // The mock echoes the allowed scope back, so callers can assert
+        // exactly what was offered to the brain.
+        $this->assertSame(
+            ['site:1:mod_page:2:main', 'site:1:mod_page:3:main'],
+            array_column($result['sources'], 'resourceid')
+        );
     }
 
     /**
@@ -63,7 +72,7 @@ final class mock_client_test extends \advanced_testcase {
         $client = new mock_client(true, 429);
 
         try {
-            $client->search_grounded('site:1:course:2', 'q');
+            $client->search_grounded('q', 'pseudonym-1', ['site:1:mod_page:2:main']);
             $this->fail('Expected transport_exception was not thrown.');
         } catch (transport_exception $e) {
             $this->assertSame(429, $e->httpstatus);
