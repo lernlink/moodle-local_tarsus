@@ -228,9 +228,48 @@ class http_client implements client_interface {
     }
 
     #[\Override]
-    public function generate_widgets(string $contextid, array $params): array {
-        // Phase 2.
-        throw new \coding_exception('generate_widgets is not implemented in Phase 1.');
+    public function generate_widgets(array $params): array {
+        // The field vocabulary follows the Tarsus developer's instructions:
+        // context_type is a constant, state stays 'ask', default_robot stays
+        // true, dqr sits at 6. full_brain_access must be an explicit 'false' —
+        // that is what makes resource_ids the retrieval boundary (verified
+        // live); 'true' searches the whole shared brain regardless of scope.
+        $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', [
+            'brain_id' => $this->brain(),
+            'context_id' => (string) ($params['contextid'] ?? ''),
+            'context_type' => 'tarsus_activity',
+            'context_name' => (string) ($params['contextname'] ?? ''),
+            'context_description' => (string) ($params['contextdescription'] ?? ''),
+            'robot_id' => (string) ($params['robotid'] ?? ''),
+            'robot_name' => (string) ($params['robotname'] ?? ''),
+            'robot_description' => (string) ($params['robotdescription'] ?? ''),
+            'user_id' => (string) ($params['userid'] ?? ''),
+            'user_name' => (string) ($params['username'] ?? ''),
+            'user_language' => (string) ($params['userlanguage'] ?? 'de'),
+            'state' => 'ask',
+            'default_robot' => 'true',
+            'dqr' => '6',
+            'full_brain_access' => 'false',
+            'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
+            'query' => (string) ($params['query'] ?? ''),
+        ]);
+
+        // The response carries several widgets; the first echoes the question
+        // with no data, the answer arrives in the last widget that has one.
+        $answer = '';
+        foreach (($body['activity']['widgets'] ?? []) as $widget) {
+            $text = (string) ($widget['bit']['data']['answer'] ?? '');
+            if ($text !== '') {
+                $answer = $text;
+            }
+        }
+
+        return [
+            'answer' => $answer,
+            // The response carries no cost figure; spec §6 prices a grounded
+            // answer at ~6 credits.
+            'credits' => 6,
+        ];
     }
 
     #[\Override]
@@ -384,7 +423,9 @@ class http_client implements client_interface {
      * via CURLOPT_CUSTOMREQUEST while the fields travel in the body.
      *
      * @param string $method    HTTP method.
-     * @param string $path      Path relative to the brain API prefix.
+     * @param string $path      Path relative to the brain API prefix, or an
+     *                          absolute path (leading '/') for surfaces
+     *                          outside /api/v1/brain, such as /api/t0.
      * @param array  $params    Form fields (credentials are added here).
      * @param bool   $uploading Whether the call carries a file.
      * @return array The decoded response body.
@@ -400,12 +441,16 @@ class http_client implements client_interface {
 
         $params['api_key'] = $this->apikey;
 
+        $url = str_starts_with($path, '/')
+            ? $baseurl . $path
+            : $baseurl . self::API_PREFIX . $path;
+
         // The brain expects form-data on every verb, including GET and DELETE.
         // curl::get() would move the fields into the query string and curl::delete()
         // drops them entirely, so post() carries the body and CURLOPT_CUSTOMREQUEST
         // relabels the verb, exactly as "curl --request GET --form" does.
         $curl = new \curl();
-        $response = $curl->post($baseurl . self::API_PREFIX . $path, $params, [
+        $response = $curl->post($url, $params, [
             'CURLOPT_CUSTOMREQUEST' => $method,
             'CURLOPT_RETURNTRANSFER' => 1,
             'CURLOPT_FOLLOWLOCATION' => 0,

@@ -51,6 +51,8 @@ class provider implements
 
         $collection->add_external_location_link('tarsus', [
             'userid' => 'privacy:metadata:tarsus:userid',
+            'username' => 'privacy:metadata:tarsus:username',
+            'language' => 'privacy:metadata:tarsus:language',
             'query' => 'privacy:metadata:tarsus:query',
         ], 'privacy:metadata:tarsus');
 

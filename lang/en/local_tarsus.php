@@ -67,6 +67,16 @@ $string['brain_missing'] = 'This site is configured to use brain "{$a}", but the
 $string['brain_gotosettings'] = 'Back to Tarsus settings';
 $string['nobrainselected'] = 'No Tarsus brain is selected. Pick one in the Tarsus brains page.';
 
+// Assistant identity (sent with every chat request).
+$string['settings_assistant'] = 'Assistant';
+$string['settings_assistant_desc'] = 'How the AI assistant introduces itself in the activity chat. One identity for the whole organisation.';
+$string['robotname'] = 'Assistant name';
+$string['robotname_desc'] = 'The global name of the AI assistant, as learners see it.';
+$string['robotid'] = 'Assistant ID';
+$string['robotid_desc'] = 'The database id of this assistant on the Tarsus side, as provided by Tarsus.';
+$string['robotdescription'] = 'Assistant description';
+$string['robotdescription_desc'] = 'A short description of the assistant, e.g. its role or instructions.';
+
 // Guardrail settings.
 $string['settings_guardrails'] = 'Guardrails';
 $string['settings_guardrails_desc'] = 'Bound availability and credit spend. These protect the endpoint and the budget.';
@@ -105,5 +115,7 @@ $string['privacy:metadata:local_tarsus_usage:operation'] = 'The operation perfor
 $string['privacy:metadata:local_tarsus_usage:credits'] = 'The aiCredits consumed by the operation.';
 $string['privacy:metadata:local_tarsus_usage:timecreated'] = 'When the operation occurred.';
 $string['privacy:metadata:tarsus'] = 'Data transmitted to the Tarsus RAG engine to ground answers in course material.';
-$string['privacy:metadata:tarsus:userid'] = 'A stable pseudonym (HMAC of the Moodle user id); names and emails are never sent. As the pseudonym is reversible it remains personal data.';
+$string['privacy:metadata:tarsus:userid'] = 'A stable pseudonym (HMAC of the Moodle user id); email addresses are never sent. As the pseudonym is reversible it remains personal data.';
+$string['privacy:metadata:tarsus:username'] = 'The user\'s display name, so the assistant can address them personally in the chat.';
+$string['privacy:metadata:tarsus:language'] = 'The user\'s interface language, so the assistant answers in it.';
 $string['privacy:metadata:tarsus:query'] = 'The query text sent for grounded retrieval.';

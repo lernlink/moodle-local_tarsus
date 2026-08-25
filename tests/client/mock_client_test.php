@@ -51,6 +51,22 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
+     * The chat mock echoes the question and the allowed scope.
+     *
+     * @return void
+     */
+    public function test_generate_widgets_echoes_query_and_scope(): void {
+        $client = new mock_client();
+        $result = $client->generate_widgets([
+            'query' => 'What is photosynthesis?',
+            'resourceids' => ['site:1:mod_page:2:main'],
+        ]);
+
+        $this->assertStringContainsString('What is photosynthesis?', $result['answer']);
+        $this->assertStringContainsString('site:1:mod_page:2:main', $result['answer']);
+    }
+
+    /**
      * Async track yields pending-confirmation; sync track yields indexed.
      *
      * @return void

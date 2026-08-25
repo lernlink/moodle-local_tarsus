@@ -173,9 +173,18 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
-    public function generate_widgets(string $contextid, array $params): array {
-        // Phase 2.
-        throw new \coding_exception('generate_widgets is not implemented in Phase 1.');
+    public function generate_widgets(array $params): array {
+        $this->maybe_fail();
+
+        // Echo the question and the allowed scope back, so tests can assert
+        // both what was asked and what the brain was allowed to read.
+        $scope = implode(',', array_map('strval', $params['resourceids'] ?? []));
+
+        return [
+            'answer' => 'Mock chat answer for: ' . (string) ($params['query'] ?? '')
+                . ' [scope: ' . $scope . ']',
+            'credits' => 6,
+        ];
     }
 
     #[\Override]

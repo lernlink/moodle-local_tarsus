@@ -88,6 +88,36 @@ if ($hassiteconfig) {
     ));
 
     $settings->add(new admin_setting_heading(
+        'local_tarsus/assistant',
+        get_string('settings_assistant', 'local_tarsus'),
+        get_string('settings_assistant_desc', 'local_tarsus')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'local_tarsus/robot_name',
+        get_string('robotname', 'local_tarsus'),
+        get_string('robotname_desc', 'local_tarsus'),
+        'Tarsus',
+        PARAM_TEXT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'local_tarsus/robot_id',
+        get_string('robotid', 'local_tarsus'),
+        get_string('robotid_desc', 'local_tarsus'),
+        '',
+        PARAM_TEXT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'local_tarsus/robot_description',
+        get_string('robotdescription', 'local_tarsus'),
+        get_string('robotdescription_desc', 'local_tarsus'),
+        '',
+        PARAM_TEXT
+    ));
+
+    $settings->add(new admin_setting_heading(
         'local_tarsus/guardrails',
         get_string('settings_guardrails', 'local_tarsus'),
         get_string('settings_guardrails_desc', 'local_tarsus')

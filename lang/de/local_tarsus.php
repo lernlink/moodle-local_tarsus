@@ -36,6 +36,16 @@ $string['brainid_desc'] = 'Das einzige von dieser Website genutzte Tarsus-Brain.
 $string['baseurl'] = 'Basis-URL';
 $string['baseurl_desc'] = 'Die Basis-URL der Tarsus-API (Datenstandort: Deutschland).';
 
+// Assistenten-Identität (wird mit jeder Chat-Anfrage gesendet).
+$string['settings_assistant'] = 'Assistent';
+$string['settings_assistant_desc'] = 'Wie sich der KI-Assistent im Aktivitäts-Chat vorstellt. Eine Identität für die gesamte Organisation.';
+$string['robotname'] = 'Name des Assistenten';
+$string['robotname_desc'] = 'Der globale Name des KI-Assistenten, wie Lernende ihn sehen.';
+$string['robotid'] = 'Assistenten-ID';
+$string['robotid_desc'] = 'Die Datenbank-ID dieses Assistenten auf Tarsus-Seite, wie von Tarsus mitgeteilt.';
+$string['robotdescription'] = 'Beschreibung des Assistenten';
+$string['robotdescription_desc'] = 'Eine kurze Beschreibung des Assistenten, z. B. Rolle oder Anweisungen.';
+
 // Guardrail-Einstellungen.
 $string['settings_guardrails'] = 'Schutzmechanismen';
 $string['settings_guardrails_desc'] = 'Begrenzen Verfügbarkeit und Credit-Verbrauch. Sie schützen den Endpunkt und das Budget.';
@@ -105,5 +115,7 @@ $string['privacy:metadata:local_tarsus_usage:operation'] = 'Der ausgeführte Vor
 $string['privacy:metadata:local_tarsus_usage:credits'] = 'Die vom Vorgang verbrauchten aiCredits.';
 $string['privacy:metadata:local_tarsus_usage:timecreated'] = 'Zeitpunkt des Vorgangs.';
 $string['privacy:metadata:tarsus'] = 'An die Tarsus-RAG-Engine übermittelte Daten, um Antworten in Kursmaterialien zu verankern.';
-$string['privacy:metadata:tarsus:userid'] = 'Ein stabiles Pseudonym (HMAC der Moodle-Benutzer-ID); Namen und E-Mail-Adressen werden nie gesendet. Da das Pseudonym umkehrbar ist, bleibt es personenbezogen.';
+$string['privacy:metadata:tarsus:userid'] = 'Ein stabiles Pseudonym (HMAC der Moodle-Benutzer-ID); E-Mail-Adressen werden nie gesendet. Da das Pseudonym umkehrbar ist, bleibt es personenbezogen.';
+$string['privacy:metadata:tarsus:username'] = 'Der Anzeigename der Person, damit der Assistent sie im Chat persönlich ansprechen kann.';
+$string['privacy:metadata:tarsus:language'] = 'Die Oberflächensprache der Person, damit der Assistent in dieser Sprache antwortet.';
 $string['privacy:metadata:tarsus:query'] = 'Der für die fundierte Abfrage gesendete Abfragetext.';

@@ -109,13 +109,23 @@ interface client_interface {
     public function list_brains(): array;
 
     /**
-     * Generate learning widgets (tests / stacks). Phase 2.
+     * Ask the activity chat (t0 surface) and return the assistant's answer.
      *
-     * @param string $contextid Namespaced context.
-     * @param array  $params    Generation parameters.
-     * @return array Generated widgets.
+     * Unlike {@see search_grounded()} this is a conversation: the brain keeps
+     * dialogue memory per (context_id, user_id), so each call only carries the
+     * new question. Retrieval is scoped by 'resourceids' with full brain
+     * access off — verified live: an out-of-scope question is refused, and
+     * with full access on the scope list is ignored entirely. An empty scope
+     * must never reach the API; callers refuse locally.
+     *
+     * Expected $params keys: contextid, contextname, contextdescription,
+     * robotid, robotname, robotdescription, userid, username, userlanguage,
+     * resourceids (non-empty string[]), query.
+     *
+     * @param array $params The conversation parameters, as above.
+     * @return array Result with 'answer' (markdown) and 'credits'.
      */
-    public function generate_widgets(string $contextid, array $params): array;
+    public function generate_widgets(array $params): array;
 
     /**
      * Evaluate a learner answer against the material. Phase 2.
