@@ -148,6 +148,18 @@ interface client_interface {
     public function retrieve_widgets(array $params): array;
 
     /**
+     * Erase one user's conversation in one activity context.
+     *
+     * The brain forgets both the transcript and its dialogue memory: the
+     * next question starts a fresh conversation (and is greeted again).
+     *
+     * @param string $contextid The conversation context id.
+     * @param string $userid    Pseudonymised user id.
+     * @return void
+     */
+    public function reset_conversation(string $contextid, string $userid): void;
+
+    /**
      * Evaluate a learner answer against the material. Phase 2.
      *
      * @param string $contextid Namespaced context.

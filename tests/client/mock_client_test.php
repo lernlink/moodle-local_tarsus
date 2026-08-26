@@ -86,6 +86,24 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
+     * Resetting a conversation honours the simulated failure switch.
+     *
+     * @return void
+     */
+    public function test_reset_conversation_respects_simulated_failure(): void {
+        // A healthy client resets without complaint.
+        (new mock_client())->reset_conversation('site:tarsuszero:1', 'pseudonym-1');
+
+        $failing = new mock_client(true, 500);
+        try {
+            $failing->reset_conversation('site:tarsuszero:1', 'pseudonym-1');
+            $this->fail('Expected transport_exception was not thrown.');
+        } catch (transport_exception $e) {
+            $this->assertSame(500, $e->httpstatus);
+        }
+    }
+
+    /**
      * Async track yields pending-confirmation; sync track yields indexed.
      *
      * @return void

@@ -169,6 +169,16 @@ class http_client implements client_interface {
     }
 
     #[\Override]
+    public function reset_conversation(string $contextid, string $userid): void {
+        $this->send('DELETE', '/api/t0/activity/reset/user/widgets', [
+            'brain_id' => $this->brain(),
+            'context_id' => $contextid,
+            'context_type' => 'tarsus_activity',
+            'user_id' => $userid,
+        ]);
+    }
+
+    #[\Override]
     public function untrack_resource(array $resourceids): array {
         $result = [];
 

@@ -115,6 +115,11 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function reset_conversation(string $contextid, string $userid): void {
+        $this->maybe_fail();
+    }
+
+    #[\Override]
     public function untrack_resource(array $resourceids): array {
         $this->maybe_fail();
 
