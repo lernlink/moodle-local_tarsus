@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026073111;
+$plugin->version   = 2026073112;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.3.1 (Phase 1 conversation reset client)';
+$plugin->release   = '1.3.2 (Phase 1 assistant avatar setting)';

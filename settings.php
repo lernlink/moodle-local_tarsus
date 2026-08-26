@@ -117,6 +117,15 @@ if ($hassiteconfig) {
         PARAM_TEXT
     ));
 
+    $settings->add(new admin_setting_configstoredfile(
+        'local_tarsus/robot_avatar',
+        get_string('robotavatar', 'local_tarsus'),
+        get_string('robotavatar_desc', 'local_tarsus'),
+        'robotavatar',
+        0,
+        ['maxfiles' => 1, 'accepted_types' => ['web_image']]
+    ));
+
     $settings->add(new admin_setting_heading(
         'local_tarsus/guardrails',
         get_string('settings_guardrails', 'local_tarsus'),

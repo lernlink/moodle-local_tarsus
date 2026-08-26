@@ -87,4 +87,25 @@ class config {
         $value = $this->fresh('creditbudget');
         return $value === false ? self::DEFAULT_CREDIT_BUDGET : max(0, (int) $value);
     }
+
+    /**
+     * URL of the assistant avatar uploaded in the admin settings.
+     *
+     * @return string The pluginfile URL, or '' when no avatar is uploaded.
+     */
+    public static function robot_avatar_url(): string {
+        $context = \context_system::instance();
+        $files = get_file_storage()->get_area_files(
+            $context->id, 'local_tarsus', 'robotavatar', 0, 'itemid, filepath, filename', false
+        );
+
+        foreach ($files as $file) {
+            return \moodle_url::make_pluginfile_url(
+                $context->id, 'local_tarsus', 'robotavatar', null,
+                $file->get_filepath(), $file->get_filename()
+            )->out(false);
+        }
+
+        return '';
+    }
 }

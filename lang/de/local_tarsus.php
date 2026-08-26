@@ -45,6 +45,8 @@ $string['robotid'] = 'Assistenten-ID';
 $string['robotid_desc'] = 'Die Datenbank-ID dieses Assistenten auf Tarsus-Seite, wie von Tarsus mitgeteilt.';
 $string['robotdescription'] = 'Beschreibung des Assistenten';
 $string['robotdescription_desc'] = 'Eine kurze Beschreibung des Assistenten, z. B. Rolle oder Anweisungen.';
+$string['robotavatar'] = 'Avatar des Assistenten';
+$string['robotavatar_desc'] = 'Das Bild neben den Antworten des Assistenten im Chat. Quadratische Bilder eignen sich am besten.';
 
 // Guardrail-Einstellungen.
 $string['settings_guardrails'] = 'Schutzmechanismen';
