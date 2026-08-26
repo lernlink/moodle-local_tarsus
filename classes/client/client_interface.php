@@ -130,6 +130,24 @@ interface client_interface {
     public function generate_widgets(array $params): array;
 
     /**
+     * Read a conversation back from the brain, oldest first.
+     *
+     * The brain is the only store of the dialogue, so this is what a chat
+     * page opens with. Takes the same scope rules as
+     * {@see generate_widgets()}: the t0 surface requires resourceids even to
+     * read, and callers refuse locally on an empty scope.
+     *
+     * Expected $params keys: contextid, userid, resourceids (non-empty
+     * string[]), offset (int), pagesize (int).
+     *
+     * @param array $params The retrieval parameters, as above.
+     * @return array Result with 'turns' — a list of
+     *               {query: string (empty for informational turns),
+     *                answer: markdown string, timecreated: int} — and 'credits'.
+     */
+    public function retrieve_widgets(array $params): array;
+
+    /**
      * Evaluate a learner answer against the material. Phase 2.
      *
      * @param string $contextid Namespaced context.

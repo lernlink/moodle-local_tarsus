@@ -94,6 +94,27 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function retrieve_widgets(array $params): array {
+        $this->maybe_fail();
+
+        return [
+            'turns' => [
+                [
+                    'query' => '',
+                    'answer' => '**Mock welcome** to the activity chat!',
+                    'timecreated' => 1726722755,
+                ],
+                [
+                    'query' => 'Mock question?',
+                    'answer' => 'Mock stored answer.',
+                    'timecreated' => 1726722760,
+                ],
+            ],
+            'credits' => 0,
+        ];
+    }
+
+    #[\Override]
     public function untrack_resource(array $resourceids): array {
         $this->maybe_fail();
 

@@ -131,6 +131,44 @@ class http_client implements client_interface {
     }
 
     #[\Override]
+    public function retrieve_widgets(array $params): array {
+        $body = $this->send('POST', '/api/t0/activity/retrieve/next/widgets', [
+            'brain_id' => $this->brain(),
+            'context_id' => (string) ($params['contextid'] ?? ''),
+            'context_type' => 'tarsus_activity',
+            'user_id' => (string) ($params['userid'] ?? ''),
+            'state' => 'ask',
+            'offset' => (string) (int) ($params['offset'] ?? 0),
+            'page_size' => (string) (int) ($params['pagesize'] ?? 50),
+            'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
+        ]);
+
+        // Widgets arrive oldest first. An answerWidget carries the whole
+        // exchange (data.question + data.answer); informational widgets
+        // (welcome and friends) carry their message in bit.text and become
+        // assistant-only turns.
+        $turns = [];
+        foreach (($body['activity']['widgets'] ?? []) as $widget) {
+            $bit = $widget['bit'] ?? [];
+            $answer = (string) ($bit['data']['answer'] ?? ($bit['text'] ?? ''));
+            if ($answer === '') {
+                continue;
+            }
+            $turns[] = [
+                'query' => (string) ($bit['data']['question'] ?? ''),
+                'answer' => $answer,
+                'timecreated' => (int) ($widget['ts'] ?? 0),
+            ];
+        }
+
+        return [
+            'turns' => $turns,
+            // Reading widgets back generates nothing.
+            'credits' => 0,
+        ];
+    }
+
+    #[\Override]
     public function untrack_resource(array $resourceids): array {
         $result = [];
 

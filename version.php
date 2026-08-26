@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026073109;
+$plugin->version   = 2026073110;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.2.1 (Phase 1 relay informational chat widgets)';
+$plugin->release   = '1.3.0 (Phase 1 read conversations back from the brain)';

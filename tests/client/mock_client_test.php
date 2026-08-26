@@ -68,6 +68,24 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
+     * The conversation mock replays a deterministic history.
+     *
+     * @return void
+     */
+    public function test_retrieve_widgets_replays_a_conversation(): void {
+        $client = new mock_client();
+        $result = $client->retrieve_widgets([
+            'contextid' => 'site:tarsuszero:1',
+            'userid' => 'pseudonym-1',
+            'resourceids' => ['site:1:mod_page:2:main'],
+        ]);
+
+        $this->assertCount(2, $result['turns']);
+        $this->assertSame('', $result['turns'][0]['query']);
+        $this->assertSame('Mock question?', $result['turns'][1]['query']);
+    }
+
+    /**
      * Async track yields pending-confirmation; sync track yields indexed.
      *
      * @return void
