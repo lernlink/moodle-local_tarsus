@@ -64,6 +64,7 @@ final class mock_client_test extends \advanced_testcase {
 
         $this->assertStringContainsString('What is photosynthesis?', $result['answer']);
         $this->assertStringContainsString('site:1:mod_page:2:main', $result['answer']);
+        $this->assertNotEmpty($result['messages']);
     }
 
     /**

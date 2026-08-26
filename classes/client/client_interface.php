@@ -123,7 +123,9 @@ interface client_interface {
      * resourceids (non-empty string[]), query.
      *
      * @param array $params The conversation parameters, as above.
-     * @return array Result with 'answer' (markdown) and 'credits'.
+     * @return array Result with 'answer' (markdown), 'messages' (markdown
+     *               strings from informational widgets, e.g. the welcome on a
+     *               conversation's first call) and 'credits'.
      */
     public function generate_widgets(array $params): array;
 

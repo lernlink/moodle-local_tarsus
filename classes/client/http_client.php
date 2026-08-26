@@ -254,18 +254,31 @@ class http_client implements client_interface {
             'query' => (string) ($params['query'] ?? ''),
         ]);
 
-        // The response carries several widgets; the first echoes the question
-        // with no data, the answer arrives in the last widget that has one.
+        // The response is a widget list. An answerWidget carries the answer
+        // in bit.data.answer (its bit.text merely echoes the question); the
+        // informational widgets — welcomeWidget on a conversation's first
+        // call, and whatever Tarsus adds later — carry their message in
+        // bit.text with no data.answer. Collect both rather than matching
+        // widget types by name, so new informational widgets surface instead
+        // of vanishing.
         $answer = '';
+        $messages = [];
         foreach (($body['activity']['widgets'] ?? []) as $widget) {
-            $text = (string) ($widget['bit']['data']['answer'] ?? '');
+            $bit = $widget['bit'] ?? [];
+            $answertext = (string) ($bit['data']['answer'] ?? '');
+            if ($answertext !== '') {
+                $answer = $answertext;
+                continue;
+            }
+            $text = (string) ($bit['text'] ?? '');
             if ($text !== '') {
-                $answer = $text;
+                $messages[] = $text;
             }
         }
 
         return [
             'answer' => $answer,
+            'messages' => $messages,
             // The response carries no cost figure; spec §6 prices a grounded
             // answer at ~6 credits.
             'credits' => 6,
