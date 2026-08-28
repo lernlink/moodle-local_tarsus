@@ -141,9 +141,13 @@ class http_client implements client_interface {
             'offset' => (string) (int) ($params['offset'] ?? 0),
             'page_size' => (string) (int) ($params['pagesize'] ?? 50),
             'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
+            // Selects WHICH page a long conversation yields — the newest
+            // page_size turns, not the oldest — without affecting order.
+            'newest_first' => 'true',
         ]);
 
-        // Widgets arrive oldest first. An answerWidget carries the whole
+        // Widgets arrive oldest first (verified with and without
+        // newest_first). An answerWidget carries the whole
         // exchange (data.question + data.answer); informational widgets
         // (welcome and friends) carry their message in bit.text and become
         // assistant-only turns.
