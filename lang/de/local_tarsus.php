@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = 'Tarsus Zero';
+$string['pluginname'] = 'Tarsus';
 
 // Verbindungseinstellungen.
 $string['settings_connection'] = 'Tarsus-Verbindung';
