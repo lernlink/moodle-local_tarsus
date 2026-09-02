@@ -283,10 +283,12 @@ class http_client implements client_interface {
     public function generate_widgets(array $params): array {
         // The field vocabulary follows the Tarsus developer's instructions:
         // context_type is a constant, state stays 'ask', default_robot stays
-        // true, dqr sits at 6. full_brain_access must be an explicit 'false' —
-        // that is what makes resource_ids the retrieval boundary (verified
-        // live); 'true' searches the whole shared brain regardless of scope.
-        $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', [
+        // true, input is always text. full_brain_access must be an explicit
+        // 'false' — that is what makes resource_ids the retrieval boundary
+        // (verified live); 'true' searches the whole shared brain regardless
+        // of scope. Didactics (style, dqr, industry, full-text search) come
+        // from the activity's own settings.
+        $fields = [
             'brain_id' => $this->brain(),
             'context_id' => (string) ($params['contextid'] ?? ''),
             'context_type' => 'tarsus_activity',
@@ -300,11 +302,22 @@ class http_client implements client_interface {
             'user_language' => (string) ($params['userlanguage'] ?? 'de'),
             'state' => 'ask',
             'default_robot' => 'true',
-            'dqr' => '6',
+            'input_modality' => 'text',
+            'conversation_style' => (string) (int) ($params['conversationstyle'] ?? 3),
+            'dqr' => (string) (int) ($params['dqr'] ?? 6),
+            'full_text_search' => !empty($params['fulltextsearch']) ? 'true' : 'false',
             'full_brain_access' => 'false',
             'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
             'query' => (string) ($params['query'] ?? ''),
-        ]);
+        ];
+
+        $industry = trim((string) ($params['industry'] ?? ''));
+        if ($industry !== '') {
+            // An unset domain is omitted rather than sent empty.
+            $fields['industry'] = $industry;
+        }
+
+        $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
 
         // The response is a widget list. An answerWidget carries the answer
         // in bit.data.answer (its bit.text merely echoes the question); the

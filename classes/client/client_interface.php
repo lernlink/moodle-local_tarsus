@@ -120,7 +120,9 @@ interface client_interface {
      *
      * Expected $params keys: contextid, contextname, contextdescription,
      * robotid, robotname, robotdescription, userid, username, userlanguage,
-     * resourceids (non-empty string[]), query.
+     * resourceids (non-empty string[]), query, and the activity's didactic
+     * settings: conversationstyle (int 1-5), dqr (int 3-7), industry
+     * (string, may be empty), fulltextsearch (bool).
      *
      * @param array $params The conversation parameters, as above.
      * @return array Result with 'answer' (markdown), 'messages' (markdown
