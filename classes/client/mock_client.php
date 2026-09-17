@@ -219,6 +219,64 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function generate_practice_widget(array $params): array {
+        $this->maybe_fail();
+
+        // Echo the scope and the didactic practice settings back, so tests
+        // can assert exactly what the brain would have been asked for.
+        $scope = implode(',', array_map('strval', $params['resourceids'] ?? []));
+        $levels = implode(',', array_map('strval', $params['taxonomylevels'] ?? []));
+        $typecounts = [];
+        foreach (($params['questiontypes'] ?? []) as $grade => $types) {
+            $typecounts[] = $grade . ':' . count((array) $types);
+        }
+
+        return [
+            'widget' => [
+                'id' => 'mock-widget-1',
+                'type' => 'singleChoiceQuestionWidget',
+                'question' => 'Mock practice question?'
+                    . ' [scope: ' . $scope . ']'
+                    . ' [tax: ' . $levels . ']'
+                    . ' [types: ' . implode(' ', $typecounts) . ']',
+                'choices' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
+                'taxonomylevel' => 'WISSEN',
+                'difficultylevel' => 1,
+            ],
+            'progress' => ['earnedxp' => 0.0, 'totalxp' => 6.0, 'practiceprogress' => 0.0],
+            'credits' => 6,
+        ];
+    }
+
+    #[\Override]
+    public function evaluate_practice_answer(array $params): array {
+        $this->maybe_fail();
+
+        // 'Alpha' is the fixture's correct answer, whatever the widget.
+        $correct = strcasecmp(trim((string) ($params['useranswer'] ?? '')), 'Alpha') === 0;
+
+        return [
+            'correct' => $correct,
+            'feedback' => $correct
+                ? '**Mock clarification:** well spotted.'
+                : '**Mock clarification:** the material says Alpha.',
+            'answer' => 'Alpha',
+            'choices' => [
+                ['text' => 'Alpha', 'iscorrect' => true, 'clarification' => 'Mock: this is the one.'],
+                ['text' => 'Beta', 'iscorrect' => false, 'clarification' => 'Mock: not this.'],
+                ['text' => 'Gamma', 'iscorrect' => false, 'clarification' => 'Mock: not this.'],
+                ['text' => 'Delta', 'iscorrect' => false, 'clarification' => 'Mock: not this.'],
+            ],
+            'progress' => [
+                'earnedxp' => $correct ? 1.0 : 0.0,
+                'totalxp' => 6.0,
+                'practiceprogress' => $correct ? 16.67 : 0.0,
+            ],
+            'credits' => 6,
+        ];
+    }
+
+    #[\Override]
     public function evaluate_answer(string $contextid, array $params): array {
         // Phase 2.
         throw new \coding_exception('evaluate_answer is not implemented in Phase 1.');

@@ -35,6 +35,13 @@ interface client_interface {
     /** @var int Maximum resource ids accepted by one batch status check. */
     public const BATCH_LIMIT = 10;
 
+    /** @var string[] Question widget types the practice mode supports. */
+    public const QUESTION_WIDGET_TYPES = [
+        'singleChoiceQuestionWidget',
+        'trueFalseQuestionWidget',
+        'openQuestionWidget',
+    ];
+
     /**
      * Grounded retrieval: answer a query from tracked brain content.
      *
@@ -130,6 +137,51 @@ interface client_interface {
      *               conversation's first call) and 'credits'.
      */
     public function generate_widgets(array $params): array;
+
+    /**
+     * Generate the next practice question widget (Test knowledge mode).
+     *
+     * Same endpoint and scope rules as {@see generate_widgets()}, but with
+     * state 'practice': instead of answering a question, the brain generates
+     * the next question for the learner. Which types it may generate is
+     * steered by 'questiontypes' — a map of difficulty grade (1 Einfach,
+     * 2 Mittel, 3 Schwer) to widget type names; a grade absent from the map
+     * takes no part, which is how difficulty is selected (it has no API
+     * parameter of its own). 'taxonomylevels' narrows the Bloom levels
+     * (1 Wissen, 2 Verstehen, 3 Anwenden).
+     *
+     * Expected $params keys: those of {@see generate_widgets()} minus query,
+     * plus taxonomylevels (int[]) and questiontypes (array<int, string[]>,
+     * values from {@see QUESTION_WIDGET_TYPES}).
+     *
+     * @param array $params The generation parameters, as above.
+     * @return array Result with 'widget' (null when the brain sent no
+     *               question, else {id, type, question, choices: string[],
+     *               taxonomylevel, difficultylevel}, with correctness
+     *               information stripped), 'progress' ({earnedxp, totalxp,
+     *               practiceprogress}) and 'credits'.
+     */
+    public function generate_practice_widget(array $params): array;
+
+    /**
+     * Evaluate a learner's answer to a practice question widget.
+     *
+     * Routes to the per-type evaluate endpoint. The response reveals the
+     * correctness information the generation call withheld.
+     *
+     * Expected $params keys: contextid, contextname, contextdescription,
+     * robotid, robotname, robotdescription, userid, username, userlanguage,
+     * resourceids (non-empty string[]), taxonomylevels (int[]), widgetid,
+     * widgettype (one of {@see QUESTION_WIDGET_TYPES}), useranswer (string).
+     *
+     * @param array $params The evaluation parameters, as above.
+     * @return array Result with 'correct' (bool, or null when the endpoint
+     *               gave no verdict — open questions), 'feedback' (markdown),
+     *               'answer' (the model answer, may be empty), 'choices'
+     *               (list of {text, iscorrect, clarification}), 'progress'
+     *               ({earnedxp, totalxp, practiceprogress}) and 'credits'.
+     */
+    public function evaluate_practice_answer(array $params): array;
 
     /**
      * Read a conversation back from the brain, oldest first.

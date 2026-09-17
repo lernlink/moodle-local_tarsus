@@ -351,9 +351,220 @@ class http_client implements client_interface {
     }
 
     #[\Override]
+    public function generate_practice_widget(array $params): array {
+        // Same call as the chat, but state 'practice' makes the brain
+        // generate the next question instead of answering one. The query is
+        // required by the endpoint and stays empty here; difficulty is
+        // expressed solely through which grades of question_types carry
+        // entries (it has no parameter of its own).
+        $fields = [
+            'brain_id' => $this->brain(),
+            'context_id' => (string) ($params['contextid'] ?? ''),
+            'context_type' => 'tarsus_activity',
+            'context_name' => (string) ($params['contextname'] ?? ''),
+            'context_description' => (string) ($params['contextdescription'] ?? ''),
+            'robot_id' => (string) ($params['robotid'] ?? ''),
+            'robot_name' => (string) ($params['robotname'] ?? ''),
+            'robot_description' => (string) ($params['robotdescription'] ?? ''),
+            'user_id' => (string) ($params['userid'] ?? ''),
+            'user_name' => (string) ($params['username'] ?? ''),
+            'user_language' => (string) ($params['userlanguage'] ?? 'de'),
+            'state' => 'practice',
+            'default_robot' => 'true',
+            'input_modality' => 'text',
+            'conversation_style' => (string) (int) ($params['conversationstyle'] ?? 3),
+            'dqr' => (string) (int) ($params['dqr'] ?? 6),
+            'full_text_search' => !empty($params['fulltextsearch']) ? 'true' : 'false',
+            'full_brain_access' => 'false',
+            'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
+            'taxonomy_levels' => json_encode(array_values($params['taxonomylevels'] ?? [])),
+            'question_types' => self::encode_question_types($params['questiontypes'] ?? []),
+            'query' => '',
+        ];
+
+        $industry = trim((string) ($params['industry'] ?? ''));
+        if ($industry !== '') {
+            // An unset domain is omitted rather than sent empty.
+            $fields['industry'] = $industry;
+        }
+
+        $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
+
+        // The question is the last widget of a supported question type;
+        // anything else in the list is ignored here. Correctness information
+        // (isCorrect, clarifications, the model answer) stays server-side —
+        // it must never reach the learner's browser before evaluation.
+        $widget = null;
+        $widgetdata = [];
+        foreach (($body['activity']['widgets'] ?? []) as $candidate) {
+            $bit = $candidate['bit'] ?? [];
+            $type = (string) ($bit['type'] ?? '');
+            if (!in_array($type, self::QUESTION_WIDGET_TYPES, true)) {
+                continue;
+            }
+            $data = (array) ($bit['data'] ?? []);
+            $choices = [];
+            foreach (($data['choices'] ?? []) as $choice) {
+                $choices[] = self::choice_text($choice['choice'] ?? '');
+            }
+            $widget = [
+                'id' => (string) ($candidate['_id'] ?? ''),
+                'type' => $type,
+                'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
+                'choices' => $choices,
+                'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
+                'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
+            ];
+            $widgetdata = $data;
+        }
+
+        return [
+            'widget' => $widget,
+            'progress' => self::extract_progress((array) ($body['activity'] ?? []), $widgetdata),
+            'credits' => 6,
+        ];
+    }
+
+    #[\Override]
+    public function evaluate_practice_answer(array $params): array {
+        $paths = [
+            'singleChoiceQuestionWidget' => '/api/t0/activity/evaluate/single-choice-question/widget',
+            'trueFalseQuestionWidget' => '/api/t0/activity/evaluate/true-false-question/widget',
+            'openQuestionWidget' => '/api/t0/activity/evaluate/open-question/widget',
+        ];
+        $type = (string) ($params['widgettype'] ?? '');
+        if (!isset($paths[$type])) {
+            throw new \coding_exception('Unsupported practice widget type: ' . $type);
+        }
+
+        // The endpoints take slightly different subsets; the superset is
+        // sent to all three. learn_tempo stays at the recommended 1 until
+        // the Lerntempo setting exists.
+        $fields = [
+            'brain_id' => $this->brain(),
+            'context_id' => (string) ($params['contextid'] ?? ''),
+            'context_type' => 'tarsus_activity',
+            'context_name' => (string) ($params['contextname'] ?? ''),
+            'context_description' => (string) ($params['contextdescription'] ?? ''),
+            'robot_id' => (string) ($params['robotid'] ?? ''),
+            'robot_name' => (string) ($params['robotname'] ?? ''),
+            'robot_description' => (string) ($params['robotdescription'] ?? ''),
+            'user_id' => (string) ($params['userid'] ?? ''),
+            'user_name' => (string) ($params['username'] ?? ''),
+            'user_language' => (string) ($params['userlanguage'] ?? 'de'),
+            'state' => 'practice',
+            'input_modality' => 'text',
+            'learn_tempo' => '1',
+            'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
+            'taxonomy_levels' => json_encode(array_values($params['taxonomylevels'] ?? [])),
+            'widget_id' => (string) ($params['widgetid'] ?? ''),
+            'user_answer' => (string) ($params['useranswer'] ?? ''),
+        ];
+
+        $body = $this->send('POST', $paths[$type], $fields);
+
+        $data = (array) ($body['activity']['widget']['bit']['data'] ?? []);
+
+        // Choices now carry the verdict; the learner's pick decides
+        // correctness. Open questions have no choices — the model answer in
+        // data.answer is the feedback anchor, and the verdict (if any) is
+        // whatever the endpoint states explicitly.
+        $useranswer = self::normalise_answer((string) ($params['useranswer'] ?? ''));
+        $choices = [];
+        $correct = null;
+        $feedback = '';
+        foreach (($data['choices'] ?? []) as $choice) {
+            $text = self::choice_text($choice['choice'] ?? '');
+            $ischoicecorrect = !empty($choice['isCorrect']);
+            $choices[] = [
+                'text' => $text,
+                'iscorrect' => $ischoicecorrect,
+                'clarification' => (string) ($choice['clarification'] ?? ''),
+            ];
+            if (self::normalise_answer($text) === $useranswer) {
+                $correct = $ischoicecorrect;
+                $feedback = (string) ($choice['clarification'] ?? '');
+            }
+        }
+        if ($correct === null && array_key_exists('isCorrect', $data)) {
+            $correct = !empty($data['isCorrect']);
+        }
+        if ($feedback === '') {
+            $feedback = (string) ($data['verification'] ?? ($data['feedback'] ?? ''));
+        }
+
+        return [
+            'correct' => $correct,
+            'feedback' => $feedback,
+            'answer' => self::choice_text($data['answer'] ?? ''),
+            'choices' => $choices,
+            'progress' => self::extract_progress((array) ($body['activity'] ?? []), $data),
+            'credits' => 6,
+        ];
+    }
+
+    #[\Override]
     public function evaluate_answer(string $contextid, array $params): array {
         // Phase 2.
         throw new \coding_exception('evaluate_answer is not implemented in Phase 1.');
+    }
+
+    /**
+     * Encode the question types map with string grade keys, as the API expects.
+     *
+     * @param array<int, string[]> $map Difficulty grade => widget type names.
+     * @return string JSON object, e.g. {"1":["singleChoiceQuestionWidget"]}.
+     */
+    private static function encode_question_types(array $map): string {
+        $encoded = [];
+        foreach ($map as $grade => $types) {
+            $encoded[(string) (int) $grade] = array_values((array) $types);
+        }
+        return json_encode((object) $encoded);
+    }
+
+    /**
+     * Render a choice value as text: true/false widgets use booleans.
+     *
+     * @param mixed $choice The raw choice value from the API.
+     * @return string The choice as text.
+     */
+    private static function choice_text($choice): string {
+        if (is_bool($choice)) {
+            return $choice ? 'true' : 'false';
+        }
+        return (string) $choice;
+    }
+
+    /**
+     * Compare answers leniently: case and surrounding space do not matter.
+     *
+     * @param string $answer The answer text.
+     * @return string The normalised form.
+     */
+    private static function normalise_answer(string $answer): string {
+        return \core_text::strtolower(trim($answer));
+    }
+
+    /**
+     * Read the experience/progress figures from a t0 response.
+     *
+     * Generation carries them inside the widget data, evaluation at the
+     * activity level; the widget data wins where both are present.
+     *
+     * @param array $activity   The response's activity object.
+     * @param array $widgetdata The widget's bit.data, if any.
+     * @return array{earnedxp: float, totalxp: float, practiceprogress: float}
+     */
+    private static function extract_progress(array $activity, array $widgetdata): array {
+        $pick = static function (string $key) use ($activity, $widgetdata) {
+            return $widgetdata[$key] ?? ($activity[$key] ?? 0);
+        };
+        return [
+            'earnedxp' => (float) $pick('earnedExperiencePoints'),
+            'totalxp' => (float) $pick('totalExperiencePoints'),
+            'practiceprogress' => (float) $pick('practiceProgress'),
+        ];
     }
 
     #[\Override]

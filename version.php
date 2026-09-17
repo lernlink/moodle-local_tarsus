@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026073114;
+$plugin->version   = 2026091800;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.4.0 (Phase 1 didactic parameters in the chat call)';
+$plugin->release   = '1.5.0 (Practice question generation and evaluation client)';

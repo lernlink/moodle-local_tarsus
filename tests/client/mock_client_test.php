@@ -86,6 +86,52 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
+     * The practice mock generates a question with the settings echoed back
+     * and never leaks correctness information.
+     *
+     * @return void
+     */
+    public function test_generate_practice_widget_echoes_settings(): void {
+        $client = new mock_client();
+        $result = $client->generate_practice_widget([
+            'resourceids' => ['site:1:mod_page:2:main'],
+            'taxonomylevels' => [1, 3],
+            'questiontypes' => [1 => ['singleChoiceQuestionWidget'], 3 => ['openQuestionWidget']],
+        ]);
+
+        $widget = $result['widget'];
+        $this->assertSame('mock-widget-1', $widget['id']);
+        $this->assertSame('singleChoiceQuestionWidget', $widget['type']);
+        $this->assertStringContainsString('[scope: site:1:mod_page:2:main]', $widget['question']);
+        $this->assertStringContainsString('[tax: 1,3]', $widget['question']);
+        $this->assertStringContainsString('[types: 1:1 3:1]', $widget['question']);
+        $this->assertSame(['Alpha', 'Beta', 'Gamma', 'Delta'], $widget['choices']);
+        // The generation result must not reveal which choice is correct.
+        $this->assertArrayNotHasKey('iscorrect', $widget);
+        $this->assertSame(6.0, $result['progress']['totalxp']);
+    }
+
+    /**
+     * The practice mock judges the fixture answer and pays out experience.
+     *
+     * @return void
+     */
+    public function test_evaluate_practice_answer_judges_the_fixture(): void {
+        $client = new mock_client();
+
+        $right = $client->evaluate_practice_answer(['widgetid' => 'mock-widget-1', 'useranswer' => 'alpha']);
+        $this->assertTrue($right['correct']);
+        $this->assertSame('Alpha', $right['answer']);
+        $this->assertSame(1.0, $right['progress']['earnedxp']);
+
+        $wrong = $client->evaluate_practice_answer(['widgetid' => 'mock-widget-1', 'useranswer' => 'Beta']);
+        $this->assertFalse($wrong['correct']);
+        $this->assertStringContainsString('Alpha', $wrong['feedback']);
+        $this->assertTrue($wrong['choices'][0]['iscorrect']);
+        $this->assertSame(0.0, $wrong['progress']['earnedxp']);
+    }
+
+    /**
      * Resetting a conversation honours the simulated failure switch.
      *
      * @return void
