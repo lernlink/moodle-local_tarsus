@@ -154,11 +154,15 @@ interface client_interface {
      * plus taxonomylevels (int[]) and questiontypes (array<int, string[]>,
      * values from {@see QUESTION_WIDGET_TYPES}).
      *
+     * One call may generate several questions (usually two); all of them
+     * are returned in the order Tarsus sent them — how many appear per
+     * step is its decision, not ours.
+     *
      * @param array $params The generation parameters, as above.
-     * @return array Result with 'widget' (null when the brain sent no
-     *               question, else {id, type, question, choices: string[],
-     *               taxonomylevel, difficultylevel}, with correctness
-     *               information stripped), 'progress' ({earnedxp, totalxp,
+     * @return array Result with 'widgets' (possibly empty list of {id,
+     *               type, question, choices: string[], taxonomylevel,
+     *               difficultylevel}, with correctness information
+     *               stripped), 'progress' ({earnedxp, totalxp,
      *               practiceprogress}) and 'credits'.
      */
     public function generate_practice_widget(array $params): array;

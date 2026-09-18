@@ -428,11 +428,13 @@ class http_client implements client_interface {
 
         $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
 
-        // The question is the last widget of a supported question type;
-        // anything else in the list is ignored here. Correctness information
-        // (isCorrect, clarifications, the model answer) stays server-side —
-        // it must never reach the learner's browser before evaluation.
-        $widget = null;
+        // One call may generate several questions (verified live: usually
+        // two); every widget of a supported question type is returned, in
+        // the order Tarsus sent them — how many appear per step is its
+        // decision, not ours. Correctness information (isCorrect,
+        // clarifications, the model answer) stays server-side — it must
+        // never reach the learner's browser before evaluation.
+        $widgets = [];
         $widgetdata = [];
         foreach (($body['activity']['widgets'] ?? []) as $candidate) {
             $bit = $candidate['bit'] ?? [];
@@ -445,7 +447,7 @@ class http_client implements client_interface {
             foreach (($data['choices'] ?? []) as $choice) {
                 $choices[] = self::choice_text($choice['choice'] ?? '');
             }
-            $widget = [
+            $widgets[] = [
                 'id' => (string) ($candidate['_id'] ?? ''),
                 'type' => $type,
                 'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
@@ -457,7 +459,7 @@ class http_client implements client_interface {
         }
 
         return [
-            'widget' => $widget,
+            'widgets' => $widgets,
             'progress' => self::extract_progress((array) ($body['activity'] ?? []), $widgetdata),
             'credits' => 6,
         ];

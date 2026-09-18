@@ -261,17 +261,28 @@ class mock_client implements client_interface {
             $typecounts[] = $grade . ':' . count((array) $types);
         }
 
+        // Two questions per step, as the live brain usually generates.
         return [
-            'widget' => [
-                'id' => 'mock-widget-1',
-                'type' => 'singleChoiceQuestionWidget',
-                'question' => 'Mock practice question?'
-                    . ' [scope: ' . $scope . ']'
-                    . ' [tax: ' . $levels . ']'
-                    . ' [types: ' . implode(' ', $typecounts) . ']',
-                'choices' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
-                'taxonomylevel' => 'WISSEN',
-                'difficultylevel' => 1,
+            'widgets' => [
+                [
+                    'id' => 'mock-widget-1',
+                    'type' => 'singleChoiceQuestionWidget',
+                    'question' => 'Mock practice question?'
+                        . ' [scope: ' . $scope . ']'
+                        . ' [tax: ' . $levels . ']'
+                        . ' [types: ' . implode(' ', $typecounts) . ']',
+                    'choices' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
+                    'taxonomylevel' => 'WISSEN',
+                    'difficultylevel' => 1,
+                ],
+                [
+                    'id' => 'mock-widget-2',
+                    'type' => 'trueFalseQuestionWidget',
+                    'question' => 'Mock second practice question?',
+                    'choices' => ['true', 'false'],
+                    'taxonomylevel' => 'VERSTEHEN',
+                    'difficultylevel' => 2,
+                ],
             ],
             'progress' => ['earnedxp' => 0.0, 'totalxp' => 6.0, 'practiceprogress' => 0.0],
             'credits' => 6,

@@ -110,7 +110,9 @@ final class mock_client_test extends \advanced_testcase {
             'questiontypes' => [1 => ['singleChoiceQuestionWidget'], 3 => ['openQuestionWidget']],
         ]);
 
-        $widget = $result['widget'];
+        // One step generates several questions, as the live brain does.
+        $this->assertCount(2, $result['widgets']);
+        [$widget, $second] = $result['widgets'];
         $this->assertSame('mock-widget-1', $widget['id']);
         $this->assertSame('singleChoiceQuestionWidget', $widget['type']);
         $this->assertStringContainsString('[scope: site:1:mod_page:2:main]', $widget['question']);
@@ -119,6 +121,7 @@ final class mock_client_test extends \advanced_testcase {
         $this->assertSame(['Alpha', 'Beta', 'Gamma', 'Delta'], $widget['choices']);
         // The generation result must not reveal which choice is correct.
         $this->assertArrayNotHasKey('iscorrect', $widget);
+        $this->assertSame('trueFalseQuestionWidget', $second['type']);
         $this->assertSame(6.0, $result['progress']['totalxp']);
     }
 
