@@ -68,21 +68,32 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
-     * The conversation mock replays a deterministic history.
+     * The feed mock replays one interleaved history across the modes.
      *
      * @return void
      */
-    public function test_retrieve_widgets_replays_a_conversation(): void {
+    public function test_retrieve_feed_replays_the_interleaved_feed(): void {
         $client = new mock_client();
-        $result = $client->retrieve_widgets([
+        $result = $client->retrieve_feed([
             'contextid' => 'site:tarsuszero:1',
             'userid' => 'pseudonym-1',
             'resourceids' => ['site:1:mod_page:2:main'],
         ]);
 
-        $this->assertCount(2, $result['turns']);
-        $this->assertSame('', $result['turns'][0]['query']);
-        $this->assertSame('Mock question?', $result['turns'][1]['query']);
+        $this->assertSame(['message', 'exchange', 'practice', 'practice'],
+            array_column($result['items'], 'kind'));
+
+        [$message, $exchange, $answered, $open] = $result['items'];
+        $this->assertStringContainsString('Mock welcome', $message['text']);
+        $this->assertSame('Mock question?', $exchange['query']);
+        $this->assertTrue($answered['answered']);
+        $this->assertTrue($answered['correct']);
+        $this->assertSame('Alpha', $answered['useranswer']);
+        $this->assertFalse($open['answered']);
+        $this->assertNull($open['correct']);
+        // The open question must not reveal its verdict.
+        $this->assertSame('', $open['answer']);
+        $this->assertSame(60.0, $result['progress']['practiceprogress']);
     }
 
     /**
@@ -109,31 +120,6 @@ final class mock_client_test extends \advanced_testcase {
         // The generation result must not reveal which choice is correct.
         $this->assertArrayNotHasKey('iscorrect', $widget);
         $this->assertSame(6.0, $result['progress']['totalxp']);
-    }
-
-    /**
-     * The practice feed mock replays one answered and one open question.
-     *
-     * @return void
-     */
-    public function test_retrieve_practice_widgets_replays_the_feed(): void {
-        $client = new mock_client();
-        $result = $client->retrieve_practice_widgets([
-            'contextid' => 'site:tarsuszero:1',
-            'userid' => 'pseudonym-1',
-            'resourceids' => ['site:1:mod_page:2:main'],
-        ]);
-
-        $this->assertCount(2, $result['items']);
-        [$answered, $open] = $result['items'];
-        $this->assertTrue($answered['answered']);
-        $this->assertTrue($answered['correct']);
-        $this->assertSame('Alpha', $answered['useranswer']);
-        $this->assertFalse($open['answered']);
-        $this->assertNull($open['correct']);
-        // The open question must not reveal its verdict.
-        $this->assertSame('', $open['answer']);
-        $this->assertSame(60.0, $result['progress']['practiceprogress']);
     }
 
     /**

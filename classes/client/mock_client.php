@@ -94,22 +94,52 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
-    public function retrieve_widgets(array $params): array {
+    public function retrieve_feed(array $params): array {
         $this->maybe_fail();
 
+        // A deterministic interleaved feed: the welcome, one chat exchange,
+        // one answered practice question and one still open.
         return [
-            'turns' => [
+            'items' => [
                 [
-                    'query' => '',
-                    'answer' => '**Mock welcome** to the activity chat!',
-                    'timecreated' => 1726722755,
+                    'kind' => 'message',
+                    'text' => '**Mock welcome** to the activity chat!',
                 ],
                 [
+                    'kind' => 'exchange',
                     'query' => 'Mock question?',
                     'answer' => 'Mock stored answer.',
-                    'timecreated' => 1726722760,
+                ],
+                [
+                    'kind' => 'practice',
+                    'id' => 'mock-widget-answered',
+                    'type' => 'singleChoiceQuestionWidget',
+                    'question' => 'Mock stored practice question?',
+                    'choices' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
+                    'taxonomylevel' => 'WISSEN',
+                    'difficultylevel' => 1,
+                    'answered' => true,
+                    'correct' => true,
+                    'feedback' => '**Mock stored clarification.**',
+                    'useranswer' => 'Alpha',
+                    'answer' => 'Alpha',
+                ],
+                [
+                    'kind' => 'practice',
+                    'id' => 'mock-widget-open',
+                    'type' => 'trueFalseQuestionWidget',
+                    'question' => 'Mock unanswered practice question?',
+                    'choices' => ['true', 'false'],
+                    'taxonomylevel' => 'VERSTEHEN',
+                    'difficultylevel' => 2,
+                    'answered' => false,
+                    'correct' => null,
+                    'feedback' => '',
+                    'useranswer' => '',
+                    'answer' => '',
                 ],
             ],
+            'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'practiceprogress' => 60.0],
             'credits' => 0,
         ];
     }
@@ -245,45 +275,6 @@ class mock_client implements client_interface {
             ],
             'progress' => ['earnedxp' => 0.0, 'totalxp' => 6.0, 'practiceprogress' => 0.0],
             'credits' => 6,
-        ];
-    }
-
-    #[\Override]
-    public function retrieve_practice_widgets(array $params): array {
-        $this->maybe_fail();
-
-        // A deterministic feed: one answered question, one still open.
-        return [
-            'items' => [
-                [
-                    'id' => 'mock-widget-answered',
-                    'type' => 'singleChoiceQuestionWidget',
-                    'question' => 'Mock stored practice question?',
-                    'choices' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
-                    'taxonomylevel' => 'WISSEN',
-                    'difficultylevel' => 1,
-                    'answered' => true,
-                    'correct' => true,
-                    'feedback' => '**Mock stored clarification.**',
-                    'useranswer' => 'Alpha',
-                    'answer' => 'Alpha',
-                ],
-                [
-                    'id' => 'mock-widget-open',
-                    'type' => 'trueFalseQuestionWidget',
-                    'question' => 'Mock unanswered practice question?',
-                    'choices' => ['true', 'false'],
-                    'taxonomylevel' => 'VERSTEHEN',
-                    'difficultylevel' => 2,
-                    'answered' => false,
-                    'correct' => null,
-                    'feedback' => '',
-                    'useranswer' => '',
-                    'answer' => '',
-                ],
-            ],
-            'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'practiceprogress' => 60.0],
-            'credits' => 0,
         ];
     }
 

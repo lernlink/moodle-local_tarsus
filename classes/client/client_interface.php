@@ -184,44 +184,32 @@ interface client_interface {
     public function evaluate_practice_answer(array $params): array;
 
     /**
-     * Read the practice feed back from the brain, oldest first.
+     * Read the whole activity feed back from the brain, oldest first.
      *
-     * What the practice mode reopens with: every question the brain has
-     * generated for this user in this context, answered ones carrying their
-     * verdict, unanswered ones still answerable (with correctness stripped,
-     * as in {@see generate_practice_widget()}). The response also carries
-     * the user's experience figures, so no separate statistics call is
-     * needed. Same scope rules as {@see generate_widgets()}.
+     * The brain is the only store of the interaction history, and it keeps
+     * one interleaved feed across the interaction modes (the state filter is
+     * not applied on retrieval — verified live), so this is what an activity
+     * page opens with. Chat turns and practice questions come back in their
+     * original order: answered questions carry their verdict, unanswered
+     * ones stay answerable with correctness stripped, as in
+     * {@see generate_practice_widget()}. The response also carries the
+     * user's experience figures. Same scope rules as
+     * {@see generate_widgets()}: the t0 surface requires resourceids even
+     * to read, and callers refuse locally on an empty scope.
      *
      * Expected $params keys: contextid, userid, resourceids (non-empty
      * string[]), taxonomylevels (int[]), offset (int), pagesize (int).
      *
      * @param array $params The retrieval parameters, as above.
-     * @return array Result with 'items' — a list of {id, type, question,
+     * @return array Result with 'items' — an ordered list where each item
+     *               is one of {kind: 'message', text}, {kind: 'exchange',
+     *               query, answer} or {kind: 'practice', id, type, question,
      *               choices: string[], taxonomylevel, difficultylevel,
      *               answered: bool, correct: ?bool, feedback, useranswer,
      *               answer} — 'progress' ({earnedxp, totalxp,
      *               practiceprogress}) and 'credits'.
      */
-    public function retrieve_practice_widgets(array $params): array;
-
-    /**
-     * Read a conversation back from the brain, oldest first.
-     *
-     * The brain is the only store of the dialogue, so this is what a chat
-     * page opens with. Takes the same scope rules as
-     * {@see generate_widgets()}: the t0 surface requires resourceids even to
-     * read, and callers refuse locally on an empty scope.
-     *
-     * Expected $params keys: contextid, userid, resourceids (non-empty
-     * string[]), offset (int), pagesize (int).
-     *
-     * @param array $params The retrieval parameters, as above.
-     * @return array Result with 'turns' — a list of
-     *               {query: string (empty for informational turns),
-     *                answer: markdown string, timecreated: int} — and 'credits'.
-     */
-    public function retrieve_widgets(array $params): array;
+    public function retrieve_feed(array $params): array;
 
     /**
      * Erase one user's conversation in one activity context.

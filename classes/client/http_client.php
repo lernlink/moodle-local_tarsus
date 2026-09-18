@@ -131,7 +131,7 @@ class http_client implements client_interface {
     }
 
     #[\Override]
-    public function retrieve_widgets(array $params): array {
+    public function retrieve_feed(array $params): array {
         $body = $this->send('POST', '/api/t0/activity/retrieve/next/widgets', [
             'brain_id' => $this->brain(),
             'context_id' => (string) ($params['contextid'] ?? ''),
@@ -141,91 +141,64 @@ class http_client implements client_interface {
             'offset' => (string) (int) ($params['offset'] ?? 0),
             'page_size' => (string) (int) ($params['pagesize'] ?? 50),
             'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
-            // Selects WHICH page a long conversation yields — the newest
-            // page_size turns, not the oldest — without affecting order.
-            'newest_first' => 'true',
-        ]);
-
-        // Widgets arrive oldest first (verified with and without
-        // newest_first). The feed mixes every state (verified live: the
-        // 'state' filter is not applied on retrieval), so practice question
-        // widgets must be skipped here or they would surface as fake chat
-        // turns. An answerWidget carries the whole exchange (data.question +
-        // data.answer); informational widgets (welcome and friends) carry
-        // their message in bit.text and become assistant-only turns.
-        $turns = [];
-        foreach (($body['activity']['widgets'] ?? []) as $widget) {
-            $bit = $widget['bit'] ?? [];
-            if (in_array((string) ($bit['type'] ?? ''), self::QUESTION_WIDGET_TYPES, true)) {
-                continue;
-            }
-            $answer = (string) ($bit['data']['answer'] ?? ($bit['text'] ?? ''));
-            if ($answer === '') {
-                continue;
-            }
-            $turns[] = [
-                'query' => (string) ($bit['data']['question'] ?? ''),
-                'answer' => $answer,
-                'timecreated' => (int) ($widget['ts'] ?? 0),
-            ];
-        }
-
-        return [
-            'turns' => $turns,
-            // Reading widgets back generates nothing.
-            'credits' => 0,
-        ];
-    }
-
-    #[\Override]
-    public function retrieve_practice_widgets(array $params): array {
-        $body = $this->send('POST', '/api/t0/activity/retrieve/next/widgets', [
-            'brain_id' => $this->brain(),
-            'context_id' => (string) ($params['contextid'] ?? ''),
-            'context_type' => 'tarsus_activity',
-            'user_id' => (string) ($params['userid'] ?? ''),
-            'state' => 'practice',
-            'offset' => (string) (int) ($params['offset'] ?? 0),
-            'page_size' => (string) (int) ($params['pagesize'] ?? 50),
-            'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
             'taxonomy_levels' => json_encode(array_values($params['taxonomylevels'] ?? [])),
             // Selects WHICH page a long feed yields — the newest page_size
             // widgets, not the oldest — without affecting order.
             'newest_first' => 'true',
         ]);
 
-        // The feed mixes every state (see retrieve_widgets): here only the
-        // question widgets matter, oldest first. An answered widget carries
-        // its verdict in data.evaluation; an unanswered one can still be
-        // answered, so its correctness information is stripped as in
-        // generate_practice_widget.
+        // Widgets arrive oldest first (verified with and without
+        // newest_first), and the feed mixes every state regardless of the
+        // 'state' parameter (verified live) — which is exactly what the
+        // interleaved activity feed wants. Each widget becomes one item:
+        // question widgets a 'practice' item (answered ones carrying their
+        // verdict from data.evaluation, unanswered ones with correctness
+        // stripped), answerWidgets an 'exchange', and bare-text widgets
+        // (welcome and friends) a 'message'.
         $items = [];
         foreach (($body['activity']['widgets'] ?? []) as $widget) {
             $bit = $widget['bit'] ?? [];
             $type = (string) ($bit['type'] ?? '');
-            if (!in_array($type, self::QUESTION_WIDGET_TYPES, true)) {
+            $data = (array) ($bit['data'] ?? []);
+
+            if (in_array($type, self::QUESTION_WIDGET_TYPES, true)) {
+                $choices = [];
+                foreach (($data['choices'] ?? []) as $choice) {
+                    $choices[] = self::choice_text($choice['choice'] ?? '');
+                }
+                $evaluation = (array) ($data['evaluation'] ?? []);
+                $answered = !empty($evaluation['evaluated']);
+                $items[] = [
+                    'kind' => 'practice',
+                    'id' => (string) ($widget['_id'] ?? ''),
+                    'type' => $type,
+                    'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
+                    'choices' => $choices,
+                    'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
+                    'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
+                    'answered' => $answered,
+                    'correct' => $answered ? ((float) ($evaluation['score'] ?? 0) >= 50) : null,
+                    'feedback' => $answered ? (string) ($evaluation['feedback'] ?? '') : '',
+                    'useranswer' => $answered ? self::choice_text($evaluation['userAnswer'] ?? '') : '',
+                    'answer' => $answered ? self::choice_text($evaluation['answer'] ?? ($data['answer'] ?? '')) : '',
+                ];
                 continue;
             }
-            $data = (array) ($bit['data'] ?? []);
-            $choices = [];
-            foreach (($data['choices'] ?? []) as $choice) {
-                $choices[] = self::choice_text($choice['choice'] ?? '');
+
+            $answer = (string) ($data['answer'] ?? '');
+            if ($answer !== '') {
+                $items[] = [
+                    'kind' => 'exchange',
+                    'query' => (string) ($data['question'] ?? ''),
+                    'answer' => $answer,
+                ];
+                continue;
             }
-            $evaluation = (array) ($data['evaluation'] ?? []);
-            $answered = !empty($evaluation['evaluated']);
-            $items[] = [
-                'id' => (string) ($widget['_id'] ?? ''),
-                'type' => $type,
-                'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
-                'choices' => $choices,
-                'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
-                'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
-                'answered' => $answered,
-                'correct' => $answered ? ((float) ($evaluation['score'] ?? 0) >= 50) : null,
-                'feedback' => $answered ? (string) ($evaluation['feedback'] ?? '') : '',
-                'useranswer' => $answered ? self::choice_text($evaluation['userAnswer'] ?? '') : '',
-                'answer' => $answered ? self::choice_text($evaluation['answer'] ?? ($data['answer'] ?? '')) : '',
-            ];
+
+            $text = (string) ($bit['text'] ?? '');
+            if ($text !== '') {
+                $items[] = ['kind' => 'message', 'text' => $text];
+            }
         }
 
         return [
