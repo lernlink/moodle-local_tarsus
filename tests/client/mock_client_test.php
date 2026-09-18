@@ -112,6 +112,31 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
+     * The practice feed mock replays one answered and one open question.
+     *
+     * @return void
+     */
+    public function test_retrieve_practice_widgets_replays_the_feed(): void {
+        $client = new mock_client();
+        $result = $client->retrieve_practice_widgets([
+            'contextid' => 'site:tarsuszero:1',
+            'userid' => 'pseudonym-1',
+            'resourceids' => ['site:1:mod_page:2:main'],
+        ]);
+
+        $this->assertCount(2, $result['items']);
+        [$answered, $open] = $result['items'];
+        $this->assertTrue($answered['answered']);
+        $this->assertTrue($answered['correct']);
+        $this->assertSame('Alpha', $answered['useranswer']);
+        $this->assertFalse($open['answered']);
+        $this->assertNull($open['correct']);
+        // The open question must not reveal its verdict.
+        $this->assertSame('', $open['answer']);
+        $this->assertSame(60.0, $result['progress']['practiceprogress']);
+    }
+
+    /**
      * The practice mock judges the fixture answer and pays out experience.
      *
      * @return void

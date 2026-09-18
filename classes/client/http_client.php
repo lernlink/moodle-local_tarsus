@@ -147,13 +147,18 @@ class http_client implements client_interface {
         ]);
 
         // Widgets arrive oldest first (verified with and without
-        // newest_first). An answerWidget carries the whole
-        // exchange (data.question + data.answer); informational widgets
-        // (welcome and friends) carry their message in bit.text and become
-        // assistant-only turns.
+        // newest_first). The feed mixes every state (verified live: the
+        // 'state' filter is not applied on retrieval), so practice question
+        // widgets must be skipped here or they would surface as fake chat
+        // turns. An answerWidget carries the whole exchange (data.question +
+        // data.answer); informational widgets (welcome and friends) carry
+        // their message in bit.text and become assistant-only turns.
         $turns = [];
         foreach (($body['activity']['widgets'] ?? []) as $widget) {
             $bit = $widget['bit'] ?? [];
+            if (in_array((string) ($bit['type'] ?? ''), self::QUESTION_WIDGET_TYPES, true)) {
+                continue;
+            }
             $answer = (string) ($bit['data']['answer'] ?? ($bit['text'] ?? ''));
             if ($answer === '') {
                 continue;
@@ -167,6 +172,66 @@ class http_client implements client_interface {
 
         return [
             'turns' => $turns,
+            // Reading widgets back generates nothing.
+            'credits' => 0,
+        ];
+    }
+
+    #[\Override]
+    public function retrieve_practice_widgets(array $params): array {
+        $body = $this->send('POST', '/api/t0/activity/retrieve/next/widgets', [
+            'brain_id' => $this->brain(),
+            'context_id' => (string) ($params['contextid'] ?? ''),
+            'context_type' => 'tarsus_activity',
+            'user_id' => (string) ($params['userid'] ?? ''),
+            'state' => 'practice',
+            'offset' => (string) (int) ($params['offset'] ?? 0),
+            'page_size' => (string) (int) ($params['pagesize'] ?? 50),
+            'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
+            'taxonomy_levels' => json_encode(array_values($params['taxonomylevels'] ?? [])),
+            // Selects WHICH page a long feed yields — the newest page_size
+            // widgets, not the oldest — without affecting order.
+            'newest_first' => 'true',
+        ]);
+
+        // The feed mixes every state (see retrieve_widgets): here only the
+        // question widgets matter, oldest first. An answered widget carries
+        // its verdict in data.evaluation; an unanswered one can still be
+        // answered, so its correctness information is stripped as in
+        // generate_practice_widget.
+        $items = [];
+        foreach (($body['activity']['widgets'] ?? []) as $widget) {
+            $bit = $widget['bit'] ?? [];
+            $type = (string) ($bit['type'] ?? '');
+            if (!in_array($type, self::QUESTION_WIDGET_TYPES, true)) {
+                continue;
+            }
+            $data = (array) ($bit['data'] ?? []);
+            $choices = [];
+            foreach (($data['choices'] ?? []) as $choice) {
+                $choices[] = self::choice_text($choice['choice'] ?? '');
+            }
+            $evaluation = (array) ($data['evaluation'] ?? []);
+            $answered = !empty($evaluation['evaluated']);
+            $items[] = [
+                'id' => (string) ($widget['_id'] ?? ''),
+                'type' => $type,
+                'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
+                'choices' => $choices,
+                'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
+                'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
+                'answered' => $answered,
+                'correct' => $answered ? ((float) ($evaluation['score'] ?? 0) >= 50) : null,
+                'feedback' => $answered ? (string) ($evaluation['feedback'] ?? '') : '',
+                'useranswer' => $answered ? self::choice_text($evaluation['userAnswer'] ?? '') : '',
+                'answer' => $answered ? self::choice_text($evaluation['answer'] ?? ($data['answer'] ?? '')) : '',
+            ];
+        }
+
+        return [
+            'items' => $items,
+            // The activity level carries the user's experience figures.
+            'progress' => self::extract_progress((array) ($body['activity'] ?? []), []),
             // Reading widgets back generates nothing.
             'credits' => 0,
         ];
@@ -465,10 +530,11 @@ class http_client implements client_interface {
 
         $data = (array) ($body['activity']['widget']['bit']['data'] ?? []);
 
-        // Choices now carry the verdict; the learner's pick decides
-        // correctness. Open questions have no choices — the model answer in
-        // data.answer is the feedback anchor, and the verdict (if any) is
-        // whatever the endpoint states explicitly.
+        // The verdict lives in data.evaluation (verified live): score 0-100,
+        // the feedback sentence, the model answer and the user's answer.
+        // The choices additionally carry per-choice clarifications; matching
+        // the learner's pick against them is the fallback when the
+        // evaluation block is missing.
         $useranswer = self::normalise_answer((string) ($params['useranswer'] ?? ''));
         $choices = [];
         $correct = null;
@@ -486,17 +552,19 @@ class http_client implements client_interface {
                 $feedback = (string) ($choice['clarification'] ?? '');
             }
         }
-        if ($correct === null && array_key_exists('isCorrect', $data)) {
-            $correct = !empty($data['isCorrect']);
-        }
-        if ($feedback === '') {
-            $feedback = (string) ($data['verification'] ?? ($data['feedback'] ?? ''));
+
+        $evaluation = (array) ($data['evaluation'] ?? []);
+        $answer = (string) ($data['answer'] ?? '');
+        if (!empty($evaluation['evaluated'])) {
+            $correct = (float) ($evaluation['score'] ?? 0) >= 50;
+            $feedback = (string) ($evaluation['feedback'] ?? $feedback);
+            $answer = (string) ($evaluation['answer'] ?? $answer);
         }
 
         return [
             'correct' => $correct,
             'feedback' => $feedback,
-            'answer' => self::choice_text($data['answer'] ?? ''),
+            'answer' => self::choice_text($answer),
             'choices' => $choices,
             'progress' => self::extract_progress((array) ($body['activity'] ?? []), $data),
             'credits' => 6,

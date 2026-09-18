@@ -249,6 +249,45 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function retrieve_practice_widgets(array $params): array {
+        $this->maybe_fail();
+
+        // A deterministic feed: one answered question, one still open.
+        return [
+            'items' => [
+                [
+                    'id' => 'mock-widget-answered',
+                    'type' => 'singleChoiceQuestionWidget',
+                    'question' => 'Mock stored practice question?',
+                    'choices' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
+                    'taxonomylevel' => 'WISSEN',
+                    'difficultylevel' => 1,
+                    'answered' => true,
+                    'correct' => true,
+                    'feedback' => '**Mock stored clarification.**',
+                    'useranswer' => 'Alpha',
+                    'answer' => 'Alpha',
+                ],
+                [
+                    'id' => 'mock-widget-open',
+                    'type' => 'trueFalseQuestionWidget',
+                    'question' => 'Mock unanswered practice question?',
+                    'choices' => ['true', 'false'],
+                    'taxonomylevel' => 'VERSTEHEN',
+                    'difficultylevel' => 2,
+                    'answered' => false,
+                    'correct' => null,
+                    'feedback' => '',
+                    'useranswer' => '',
+                    'answer' => '',
+                ],
+            ],
+            'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'practiceprogress' => 60.0],
+            'credits' => 0,
+        ];
+    }
+
+    #[\Override]
     public function evaluate_practice_answer(array $params): array {
         $this->maybe_fail();
 

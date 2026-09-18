@@ -184,6 +184,28 @@ interface client_interface {
     public function evaluate_practice_answer(array $params): array;
 
     /**
+     * Read the practice feed back from the brain, oldest first.
+     *
+     * What the practice mode reopens with: every question the brain has
+     * generated for this user in this context, answered ones carrying their
+     * verdict, unanswered ones still answerable (with correctness stripped,
+     * as in {@see generate_practice_widget()}). The response also carries
+     * the user's experience figures, so no separate statistics call is
+     * needed. Same scope rules as {@see generate_widgets()}.
+     *
+     * Expected $params keys: contextid, userid, resourceids (non-empty
+     * string[]), taxonomylevels (int[]), offset (int), pagesize (int).
+     *
+     * @param array $params The retrieval parameters, as above.
+     * @return array Result with 'items' — a list of {id, type, question,
+     *               choices: string[], taxonomylevel, difficultylevel,
+     *               answered: bool, correct: ?bool, feedback, useranswer,
+     *               answer} — 'progress' ({earnedxp, totalxp,
+     *               practiceprogress}) and 'credits'.
+     */
+    public function retrieve_practice_widgets(array $params): array;
+
+    /**
      * Read a conversation back from the brain, oldest first.
      *
      * The brain is the only store of the dialogue, so this is what a chat
