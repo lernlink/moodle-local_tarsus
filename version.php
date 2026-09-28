@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026091821;
+$plugin->version   = 2026092901;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.6.1 (All generated practice questions returned per step)';
+$plugin->release   = '1.7.0 (Rule-of-three question generation and evaluation)';

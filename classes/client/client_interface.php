@@ -40,6 +40,7 @@ interface client_interface {
         'singleChoiceQuestionWidget',
         'trueFalseQuestionWidget',
         'openQuestionWidget',
+        'crossMultiplicationQuestionWidget',
     ];
 
     /**
@@ -160,9 +161,10 @@ interface client_interface {
      *
      * @param array $params The generation parameters, as above.
      * @return array Result with 'widgets' (possibly empty list of {id,
-     *               type, question, choices: string[], taxonomylevel,
-     *               difficultylevel}, with correctness information
-     *               stripped), 'progress' ({earnedxp, totalxp,
+     *               type, question, choices: string[], variables: string[]
+     *               (the quantities a rule-of-three question asks for),
+     *               taxonomylevel, difficultylevel}, with correctness
+     *               information stripped), 'progress' ({earnedxp, totalxp,
      *               practiceprogress}) and 'credits'.
      */
     public function generate_practice_widget(array $params): array;
@@ -176,13 +178,17 @@ interface client_interface {
      * Expected $params keys: contextid, contextname, contextdescription,
      * robotid, robotname, robotdescription, userid, username, userlanguage,
      * resourceids (non-empty string[]), taxonomylevels (int[]), widgetid,
-     * widgettype (one of {@see QUESTION_WIDGET_TYPES}), useranswer (string).
+     * widgettype (one of {@see QUESTION_WIDGET_TYPES}), and the answer:
+     * useranswer (string) for single-answer types, or useranswers (list of
+     * {variable, answer}) for a rule-of-three question.
      *
      * @param array $params The evaluation parameters, as above.
      * @return array Result with 'correct' (bool, or null when the endpoint
-     *               gave no verdict — open questions), 'feedback' (markdown),
-     *               'answer' (the model answer, may be empty), 'choices'
-     *               (list of {text, iscorrect, clarification}), 'progress'
+     *               gave no verdict), 'feedback' (markdown), 'answer' (the
+     *               model answer, may be empty), 'choices' (list of {text,
+     *               iscorrect, clarification}), 'answers' (list of
+     *               {variable, answer, iscorrect, clarification} — the model
+     *               answers of a rule-of-three question), 'progress'
      *               ({earnedxp, totalxp, practiceprogress}) and 'credits'.
      */
     public function evaluate_practice_answer(array $params): array;
@@ -208,10 +214,12 @@ interface client_interface {
      * @return array Result with 'items' — an ordered list where each item
      *               is one of {kind: 'message', text}, {kind: 'exchange',
      *               query, answer} or {kind: 'practice', id, type, question,
-     *               choices: string[], taxonomylevel, difficultylevel,
-     *               answered: bool, correct: ?bool, feedback, useranswer,
-     *               answer} — 'progress' ({earnedxp, totalxp,
-     *               practiceprogress}) and 'credits'.
+     *               choices: string[], variables: string[], taxonomylevel,
+     *               difficultylevel, answered: bool, correct: ?bool,
+     *               feedback, useranswer, useranswers: list of {variable,
+     *               answer}, answer, answers: list of {variable, answer}} —
+     *               'progress' ({earnedxp, totalxp, practiceprogress}) and
+     *               'credits'.
      */
     public function retrieve_feed(array $params): array;
 

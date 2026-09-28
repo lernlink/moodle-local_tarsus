@@ -174,13 +174,16 @@ class http_client implements client_interface {
                     'type' => $type,
                     'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
                     'choices' => $choices,
+                    'variables' => self::variables_of($data),
                     'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
                     'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
                     'answered' => $answered,
                     'correct' => $answered ? ((float) ($evaluation['score'] ?? 0) >= 50) : null,
                     'feedback' => $answered ? (string) ($evaluation['feedback'] ?? '') : '',
                     'useranswer' => $answered ? self::choice_text($evaluation['userAnswer'] ?? '') : '',
+                    'useranswers' => $answered ? self::variable_answers($evaluation['userVariables'] ?? []) : [],
                     'answer' => $answered ? self::choice_text($evaluation['answer'] ?? ($data['answer'] ?? '')) : '',
+                    'answers' => $answered ? self::variable_verdicts($data) : [],
                 ];
                 continue;
             }
@@ -452,6 +455,9 @@ class http_client implements client_interface {
                 'type' => $type,
                 'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
                 'choices' => $choices,
+                // A rule-of-three question asks for named quantities; the
+                // model answers arrive alongside and stay server-side.
+                'variables' => self::variables_of($data),
                 'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
                 'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
             ];
@@ -471,6 +477,7 @@ class http_client implements client_interface {
             'singleChoiceQuestionWidget' => '/api/t0/activity/evaluate/single-choice-question/widget',
             'trueFalseQuestionWidget' => '/api/t0/activity/evaluate/true-false-question/widget',
             'openQuestionWidget' => '/api/t0/activity/evaluate/open-question/widget',
+            'crossMultiplicationQuestionWidget' => '/api/t0/activity/evaluate/cross-multiplication-question/widget',
         ];
         $type = (string) ($params['widgettype'] ?? '');
         if (!isset($paths[$type])) {
@@ -500,6 +507,14 @@ class http_client implements client_interface {
             'widget_id' => (string) ($params['widgetid'] ?? ''),
             'user_answer' => (string) ($params['useranswer'] ?? ''),
         ];
+        if (!empty($params['useranswers'])) {
+            // A rule-of-three question is answered per variable; the brain
+            // accepts exactly {variable, answer} pairs (verified live).
+            $fields['user_answers'] = json_encode(array_map(
+                static fn(array $entry): array => ['variable' => $entry['variable'], 'answer' => $entry['answer']],
+                self::variable_answers($params['useranswers'])
+            ));
+        }
 
         $body = $this->send('POST', $paths[$type], $fields);
 
@@ -541,9 +556,79 @@ class http_client implements client_interface {
             'feedback' => $feedback,
             'answer' => self::choice_text($answer),
             'choices' => $choices,
+            'answers' => self::variable_verdicts($data),
             'progress' => self::extract_progress((array) ($body['activity'] ?? []), $data),
             'credits' => 6,
         ];
+    }
+
+    /**
+     * The model answers of a rule-of-three question with their verdicts.
+     *
+     * Verified live: after evaluation, data.evaluation carries
+     * answerVariables (the model figures) and evaluationMask — one
+     * {variable, evaluation} per quantity, negative when wrong.
+     *
+     * @param array $data The widget's bit.data.
+     * @return array<int, array{variable: string, answer: string, iscorrect: bool, clarification: string}>
+     */
+    private static function variable_verdicts(array $data): array {
+        $evaluation = (array) ($data['evaluation'] ?? []);
+        $verdicts = [];
+        foreach ((array) ($evaluation['evaluationMask'] ?? []) as $entry) {
+            if (is_array($entry) && isset($entry['variable'])) {
+                $verdicts[(string) $entry['variable']] = (float) ($entry['evaluation'] ?? 0) > 0;
+            }
+        }
+        $answers = self::variable_answers($evaluation['answerVariables'] ?? ($data['answers'] ?? []));
+        foreach ($answers as &$answer) {
+            $answer['iscorrect'] = $verdicts[$answer['variable']] ?? false;
+        }
+        unset($answer);
+        return $answers;
+    }
+
+    /**
+     * The variable names a rule-of-three question asks for, in order.
+     *
+     * @param array $data The widget's bit.data.
+     * @return string[] Variable names; empty for other question types.
+     */
+    private static function variables_of(array $data): array {
+        $variables = [];
+        foreach ((array) ($data['answers'] ?? []) as $entry) {
+            $variable = trim((string) ($entry['variable'] ?? ''));
+            if ($variable !== '') {
+                $variables[] = $variable;
+            }
+        }
+        return $variables;
+    }
+
+    /**
+     * Normalise a per-variable answer list from either side of the wire.
+     *
+     * @param mixed $entries Raw list of {variable, answer[, isCorrect, clarification]}.
+     * @return array<int, array{variable: string, answer: string, iscorrect: bool, clarification: string}>
+     */
+    private static function variable_answers($entries): array {
+        $answers = [];
+        foreach ((array) $entries as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $variable = trim((string) ($entry['variable'] ?? ''));
+            if ($variable === '') {
+                continue;
+            }
+            $answers[] = [
+                'variable' => $variable,
+                'answer' => (string) ($entry['answer'] ?? ''),
+                'iscorrect' => !empty($entry['isCorrect'] ?? ($entry['iscorrect'] ?? false)),
+                'clarification' => (string) ($entry['clarification'] ?? ''),
+            ];
+        }
+        return $answers;
     }
 
     #[\Override]

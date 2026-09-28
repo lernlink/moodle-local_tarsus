@@ -293,7 +293,32 @@ class mock_client implements client_interface {
     public function evaluate_practice_answer(array $params): array {
         $this->maybe_fail();
 
-        // 'Alpha' is the fixture's correct answer, whatever the widget.
+        // 'Alpha' is the fixture's correct answer, whatever the widget —
+        // for a rule-of-three question, every variable must say so.
+        $useranswers = (array) ($params['useranswers'] ?? []);
+        if ($useranswers !== []) {
+            $correct = true;
+            $answers = [];
+            foreach ($useranswers as $entry) {
+                $iscorrect = strcasecmp(trim((string) ($entry['answer'] ?? '')), 'Alpha') === 0;
+                $correct = $correct && $iscorrect;
+                $answers[] = [
+                    'variable' => (string) ($entry['variable'] ?? ''),
+                    'answer' => 'Alpha',
+                    'iscorrect' => $iscorrect,
+                    'clarification' => $iscorrect ? 'Mock: right.' : 'Mock: the material says Alpha.',
+                ];
+            }
+            return [
+                'correct' => $correct,
+                'feedback' => $correct ? '**Mock clarification:** all quantities right.' : '**Mock clarification:** check the highlighted quantities.',
+                'answer' => '',
+                'choices' => [],
+                'answers' => $answers,
+                'progress' => ['earnedxp' => $correct ? 1.0 : 0.0, 'totalxp' => 6.0, 'practiceprogress' => $correct ? 16.67 : 0.0],
+                'credits' => 6,
+            ];
+        }
         $correct = strcasecmp(trim((string) ($params['useranswer'] ?? '')), 'Alpha') === 0;
 
         return [
@@ -302,6 +327,7 @@ class mock_client implements client_interface {
                 ? '**Mock clarification:** well spotted.'
                 : '**Mock clarification:** the material says Alpha.',
             'answer' => 'Alpha',
+            'answers' => [],
             'choices' => [
                 ['text' => 'Alpha', 'iscorrect' => true, 'clarification' => 'Mock: this is the one.'],
                 ['text' => 'Beta', 'iscorrect' => false, 'clarification' => 'Mock: not this.'],

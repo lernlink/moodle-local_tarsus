@@ -146,6 +146,27 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
+     * The practice mock judges rule-of-three answers per variable.
+     *
+     * @return void
+     */
+    public function test_evaluate_practice_answer_judges_per_variable(): void {
+        $client = new mock_client();
+
+        $result = $client->evaluate_practice_answer([
+            'widgetid' => 'mock-widget-3',
+            'widgettype' => 'crossMultiplicationQuestionWidget',
+            'useranswers' => [['variable' => 'K', 'answer' => 'alpha'], ['variable' => 'P', 'answer' => '33']],
+        ]);
+
+        $this->assertFalse($result['correct']);
+        $this->assertSame([], $result['choices']);
+        $this->assertSame('K', $result['answers'][0]['variable']);
+        $this->assertTrue($result['answers'][0]['iscorrect']);
+        $this->assertFalse($result['answers'][1]['iscorrect']);
+    }
+
+    /**
      * Resetting a conversation honours the simulated failure switch.
      *
      * @return void
