@@ -270,7 +270,9 @@ class mock_client implements client_interface {
                     'question' => 'Mock practice question?'
                         . ' [scope: ' . $scope . ']'
                         . ' [tax: ' . $levels . ']'
-                        . ' [types: ' . implode(' ', $typecounts) . ']',
+                        . ' [types: ' . implode(' ', $typecounts) . ']'
+                        . ' [ops: ' . (string) ($params['operators'] ?? '') . ', cheat: ' . (int) !empty($params['anticheat'])
+                        . ', tempo: ' . (string) ($params['learntempo'] ?? '') . ']',
                     'choices' => ['Alpha', 'Beta', 'Gamma', 'Delta'],
                     'taxonomylevel' => 'WISSEN',
                     'difficultylevel' => 1,

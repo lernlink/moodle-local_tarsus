@@ -131,7 +131,8 @@ interface client_interface {
      * robotid, robotname, robotdescription, userid, username, userlanguage,
      * resourceids (non-empty string[]), query, and the activity's didactic
      * settings: conversationstyle (int 1-5), dqr (int 3-7), industry
-     * (string, may be empty), fulltextsearch (bool).
+     * (string, may be empty), fulltextsearch (bool), operators ('standard'
+     * or 'ihk'), anticheat (bool), learntempo (float 0.1-2).
      *
      * @param array $params The conversation parameters, as above.
      * @return array Result with 'answer' (markdown), 'messages' (markdown

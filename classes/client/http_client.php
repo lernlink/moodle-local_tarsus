@@ -352,6 +352,9 @@ class http_client implements client_interface {
             'dqr' => (string) (int) ($params['dqr'] ?? 6),
             'full_text_search' => !empty($params['fulltextsearch']) ? 'true' : 'false',
             'full_brain_access' => 'false',
+            'operators' => self::operators($params),
+            'anti_cheat' => !empty($params['anticheat']) ? 'true' : 'false',
+            'learn_tempo' => self::learn_tempo($params),
             'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
             'query' => (string) ($params['query'] ?? ''),
         ];
@@ -421,6 +424,9 @@ class http_client implements client_interface {
             'dqr' => (string) (int) ($params['dqr'] ?? 6),
             'full_text_search' => !empty($params['fulltextsearch']) ? 'true' : 'false',
             'full_brain_access' => 'false',
+            'operators' => self::operators($params),
+            'anti_cheat' => !empty($params['anticheat']) ? 'true' : 'false',
+            'learn_tempo' => self::learn_tempo($params),
             'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
             'taxonomy_levels' => json_encode(array_values($params['taxonomylevels'] ?? [])),
             'question_types' => self::encode_question_types($params['questiontypes'] ?? []),
@@ -494,8 +500,7 @@ class http_client implements client_interface {
         }
 
         // The endpoints take slightly different subsets; the superset is
-        // sent to all three. learn_tempo stays at the recommended 1 until
-        // the Lerntempo setting exists.
+        // sent to all of them.
         $fields = [
             'brain_id' => $this->brain(),
             'context_id' => (string) ($params['contextid'] ?? ''),
@@ -510,7 +515,7 @@ class http_client implements client_interface {
             'user_language' => (string) ($params['userlanguage'] ?? 'de'),
             'state' => 'practice',
             'input_modality' => 'text',
-            'learn_tempo' => '1',
+            'learn_tempo' => self::learn_tempo($params),
             'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
             'taxonomy_levels' => json_encode(array_values($params['taxonomylevels'] ?? [])),
             'widget_id' => (string) ($params['widgetid'] ?? ''),
@@ -766,6 +771,32 @@ class http_client implements client_interface {
     public function evaluate_answer(string $contextid, array $params): array {
         // Phase 2.
         throw new \coding_exception('evaluate_answer is not implemented in Phase 1.');
+    }
+
+    /**
+     * The operator taxonomy to send: 'standard' or 'ihk'.
+     *
+     * @param array $params The call parameters.
+     * @return string The taxonomy; 'standard' when unset or unknown.
+     */
+    private static function operators(array $params): string {
+        $value = strtolower(trim((string) ($params['operators'] ?? '')));
+        return in_array($value, ['standard', 'ihk'], true) ? $value : 'standard';
+    }
+
+    /**
+     * The learning pace to send, within the brain's 0.1-2 range.
+     *
+     * @param array $params The call parameters.
+     * @return string The pace as text; '1' (the recommended pace) when unset.
+     */
+    private static function learn_tempo(array $params): string {
+        $value = $params['learntempo'] ?? null;
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return '1';
+        }
+        $pace = max(0.1, min(2.0, round((float) $value, 2)));
+        return rtrim(rtrim(number_format($pace, 2, '.', ''), '0'), '.');
     }
 
     /**
