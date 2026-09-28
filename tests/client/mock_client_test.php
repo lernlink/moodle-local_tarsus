@@ -167,6 +167,29 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
+     * The practice mock judges a costing table per asked cell.
+     *
+     * @return void
+     */
+    public function test_evaluate_practice_answer_judges_the_table(): void {
+        $client = new mock_client();
+
+        $result = $client->evaluate_practice_answer([
+            'widgetid' => 'mock-widget-4',
+            'widgettype' => 'tradeCostingQuestionWidget',
+            'usertable' => [
+                ['position' => '= Bezugspreis', 'rate' => '', 'amount' => '190,00 EUR'],
+                ['position' => '+ Handlungskosten', 'rate' => '20,00 %', 'amount' => 'Alpha'],
+            ],
+        ]);
+
+        $this->assertTrue($result['correct']);
+        $this->assertSame(0, $result['answertable'][0]['amountverdict']);
+        $this->assertSame(1, $result['answertable'][1]['amountverdict']);
+        $this->assertSame('190,00 EUR', $result['usertable'][0]['amount']);
+    }
+
+    /**
      * Resetting a conversation honours the simulated failure switch.
      *
      * @return void

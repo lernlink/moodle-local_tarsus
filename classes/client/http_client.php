@@ -175,6 +175,8 @@ class http_client implements client_interface {
                     'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
                     'choices' => $choices,
                     'variables' => self::variables_of($data),
+                    'table' => self::question_table($data),
+                    'columns' => self::table_columns((array) ($data['questionTable'] ?? [])),
                     'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
                     'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
                     'answered' => $answered,
@@ -184,6 +186,8 @@ class http_client implements client_interface {
                     'useranswers' => $answered ? self::variable_answers($evaluation['userVariables'] ?? []) : [],
                     'answer' => $answered ? self::choice_text($evaluation['answer'] ?? ($data['answer'] ?? '')) : '',
                     'answers' => $answered ? self::variable_verdicts($data) : [],
+                    'usertable' => $answered ? self::table_rows($evaluation['userTable'] ?? []) : [],
+                    'answertable' => $answered ? self::table_verdicts($data) : [],
                 ];
                 continue;
             }
@@ -458,6 +462,10 @@ class http_client implements client_interface {
                 // A rule-of-three question asks for named quantities; the
                 // model answers arrive alongside and stay server-side.
                 'variables' => self::variables_of($data),
+                // A spreadsheet calculation asks for the '?' cells of a
+                // costing table; the answer table stays server-side.
+                'table' => self::question_table($data),
+                'columns' => self::table_columns((array) ($data['questionTable'] ?? [])),
                 'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
                 'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
             ];
@@ -478,6 +486,7 @@ class http_client implements client_interface {
             'trueFalseQuestionWidget' => '/api/t0/activity/evaluate/true-false-question/widget',
             'openQuestionWidget' => '/api/t0/activity/evaluate/open-question/widget',
             'crossMultiplicationQuestionWidget' => '/api/t0/activity/evaluate/cross-multiplication-question/widget',
+            'tradeCostingQuestionWidget' => '/api/t0/activity/evaluate/trade-costing-question/widget',
         ];
         $type = (string) ($params['widgettype'] ?? '');
         if (!isset($paths[$type])) {
@@ -513,6 +522,22 @@ class http_client implements client_interface {
             $fields['user_answers'] = json_encode(array_map(
                 static fn(array $entry): array => ['variable' => $entry['variable'], 'answer' => $entry['answer']],
                 self::variable_answers($params['useranswers'])
+            ));
+        } else if (!empty($params['usertable'])) {
+            // A spreadsheet calculation is answered as the whole table, the
+            // given cells echoed and the '?' cells filled (verified live).
+            // The column names are localised by the brain per user language
+            // (Position/Satz/Betrag, Position/Rate/Amount, ...), so the
+            // names the question came with travel back with the answer.
+            $columns = array_values(array_map('strval', (array) ($params['columns'] ?? [])));
+            if (count($columns) !== 3) {
+                $columns = ['Position', 'Satz', 'Betrag'];
+            }
+            $fields['user_answers'] = json_encode(array_map(
+                static fn(array $row): array => [
+                    $columns[0] => $row['position'], $columns[1] => $row['rate'], $columns[2] => $row['amount'],
+                ],
+                self::table_rows($params['usertable'])
             ));
         }
 
@@ -557,9 +582,115 @@ class http_client implements client_interface {
             'answer' => self::choice_text($answer),
             'choices' => $choices,
             'answers' => self::variable_verdicts($data),
+            'usertable' => self::table_rows(((array) ($data['evaluation'] ?? []))['userTable'] ?? []),
+            'answertable' => self::table_verdicts($data),
             'progress' => self::extract_progress((array) ($body['activity'] ?? []), $data),
             'credits' => 6,
         ];
+    }
+
+    /**
+     * The question table of a spreadsheet calculation, '?' marking the
+     * cells to answer.
+     *
+     * @param array $data The widget's bit.data.
+     * @return array<int, array{position: string, rate: string, amount: string, askrate: bool, askamount: bool}>
+     */
+    private static function question_table(array $data): array {
+        $rows = [];
+        foreach (self::table_rows($data['questionTable'] ?? []) as $row) {
+            $row['askrate'] = $row['rate'] === '?';
+            $row['askamount'] = $row['amount'] === '?';
+            $rows[] = $row;
+        }
+        return $rows;
+    }
+
+    /**
+     * The column names of an API costing table: position, rate, amount.
+     *
+     * The brain localises them per user language (Position/Satz/Betrag,
+     * Position/Rate/Amount, ...); known names are matched, anything else
+     * falls back to column order.
+     *
+     * @param array $rows The API rows.
+     * @return string[] Exactly three names, defaults when the table is empty.
+     */
+    private static function table_columns(array $rows): array {
+        $first = null;
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $first = $row;
+                break;
+            }
+        }
+        if ($first === null) {
+            return ['Position', 'Satz', 'Betrag'];
+        }
+        $keys = array_values(array_filter(array_keys($first),
+            static fn($key) => strcasecmp((string) $key, 'clarification') !== 0));
+        $pick = static function (string $pattern, int $index) use ($keys): string {
+            foreach ($keys as $key) {
+                if (preg_match($pattern, (string) $key)) {
+                    return (string) $key;
+                }
+            }
+            return (string) ($keys[$index] ?? '');
+        };
+        return [
+            $pick('/^position$/i', 0),
+            $pick('/^(rate|satz|prozentsatz|taux|tasa|tasso)$/i', 1),
+            $pick('/^(amount|betrag|montant|importe|importo)$/i', 2),
+        ];
+    }
+
+    /**
+     * Normalise costing table rows from either side of the wire.
+     *
+     * @param mixed $entries Raw rows: API rows in any column language, or ours (position/rate/amount).
+     * @return array<int, array{position: string, rate: string, amount: string}>
+     */
+    private static function table_rows($entries): array {
+        $entries = array_values(array_filter((array) $entries, 'is_array'));
+        [$poskey, $ratekey, $amountkey] = self::table_columns($entries);
+        $rows = [];
+        foreach ($entries as $entry) {
+            $position = trim((string) ($entry['position'] ?? ($entry[$poskey] ?? '')));
+            if ($position === '') {
+                continue;
+            }
+            $rows[] = [
+                'position' => $position,
+                'rate' => trim((string) ($entry['rate'] ?? ($entry[$ratekey] ?? ''))),
+                'amount' => trim((string) ($entry['amount'] ?? ($entry[$amountkey] ?? ''))),
+            ];
+        }
+        return $rows;
+    }
+
+    /**
+     * The model table of a spreadsheet calculation with per-cell verdicts.
+     *
+     * Verified live: after evaluation, data.evaluation carries answerTable
+     * (the model rows) and evaluationMask — one {Position, Satz, Betrag}
+     * per row, 1 for a correct cell, -1 for a wrong one, 0 for a given one.
+     *
+     * @param array $data The widget's bit.data.
+     * @return array<int, array{position: string, rate: string, amount: string, rateverdict: int, amountverdict: int}>
+     */
+    private static function table_verdicts(array $data): array {
+        $evaluation = (array) ($data['evaluation'] ?? []);
+        $mask = array_values(array_filter((array) ($evaluation['evaluationMask'] ?? []), 'is_array'));
+        $modelrows = (array) ($evaluation['answerTable'] ?? ($data['answerTable'] ?? []));
+        [, $ratekey, $amountkey] = self::table_columns($mask !== [] ? $mask : $modelrows);
+        $rows = [];
+        foreach (self::table_rows($modelrows) as $i => $row) {
+            $cell = $mask[$i] ?? [];
+            $row['rateverdict'] = max(-1, min(1, (int) ($cell[$ratekey] ?? 0)));
+            $row['amountverdict'] = max(-1, min(1, (int) ($cell[$amountkey] ?? 0)));
+            $rows[] = $row;
+        }
+        return $rows;
     }
 
     /**

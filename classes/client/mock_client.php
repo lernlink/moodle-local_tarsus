@@ -294,7 +294,40 @@ class mock_client implements client_interface {
         $this->maybe_fail();
 
         // 'Alpha' is the fixture's correct answer, whatever the widget —
-        // for a rule-of-three question, every variable must say so.
+        // for a rule-of-three question, every variable must say so; for a
+        // spreadsheet calculation, every asked amount.
+        $usertable = (array) ($params['usertable'] ?? []);
+        if ($usertable !== []) {
+            $correct = true;
+            $answertable = [];
+            foreach ($usertable as $row) {
+                $asked = ($row['amount'] ?? '') !== '' && strpos((string) ($row['position'] ?? ''), '=') === false;
+                $iscorrect = strcasecmp(trim((string) ($row['amount'] ?? '')), 'Alpha') === 0;
+                $correct = $correct && (!$asked || $iscorrect);
+                $answertable[] = [
+                    'position' => (string) ($row['position'] ?? ''),
+                    'rate' => (string) ($row['rate'] ?? ''),
+                    'amount' => $asked ? 'Alpha' : (string) ($row['amount'] ?? ''),
+                    'rateverdict' => 0,
+                    'amountverdict' => $asked ? ($iscorrect ? 1 : -1) : 0,
+                ];
+            }
+            return [
+                'correct' => $correct,
+                'feedback' => $correct ? '**Mock clarification:** the table adds up.' : '**Mock clarification:** check the marked amounts.',
+                'answer' => '',
+                'choices' => [],
+                'answers' => [],
+                'usertable' => array_map(static fn(array $row): array => [
+                    'position' => (string) ($row['position'] ?? ''),
+                    'rate' => (string) ($row['rate'] ?? ''),
+                    'amount' => (string) ($row['amount'] ?? ''),
+                ], $usertable),
+                'answertable' => $answertable,
+                'progress' => ['earnedxp' => $correct ? 1.0 : 0.5, 'totalxp' => 6.0, 'practiceprogress' => 16.67],
+                'credits' => 6,
+            ];
+        }
         $useranswers = (array) ($params['useranswers'] ?? []);
         if ($useranswers !== []) {
             $correct = true;
