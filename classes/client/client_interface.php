@@ -145,10 +145,10 @@ interface client_interface {
      * state 'practice': instead of answering a question, the brain generates
      * the next question for the learner. Which types it may generate is
      * steered by 'questiontypes' — a map of difficulty grade (1 Einfach,
-     * 2 Mittel, 3 Schwer) to widget type names; a grade absent from the map
-     * takes no part, which is how difficulty is selected (it has no API
-     * parameter of its own). 'taxonomylevels' narrows the Bloom levels
-     * (1 Wissen, 2 Verstehen, 3 Anwenden).
+     * 2 Mittel, 3 Schwer) to widget type names. The brain requires all
+     * three grades, each with at least one type (verified live); difficulty
+     * has no API parameter of its own. 'taxonomylevels' narrows the Bloom
+     * levels (1 Wissen, 2 Verstehen, 3 Anwenden).
      *
      * Expected $params keys: those of {@see generate_widgets()} minus query,
      * plus taxonomylevels (int[]) and questiontypes (array<int, string[]>,

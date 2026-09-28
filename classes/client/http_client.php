@@ -392,9 +392,9 @@ class http_client implements client_interface {
     public function generate_practice_widget(array $params): array {
         // Same call as the chat, but state 'practice' makes the brain
         // generate the next question instead of answering one. The query is
-        // required by the endpoint and stays empty here; difficulty is
-        // expressed solely through which grades of question_types carry
-        // entries (it has no parameter of its own).
+        // required by the endpoint and stays empty here; question_types
+        // must carry all three grades with at least one type each (verified
+        // live) — difficulty has no parameter of its own.
         $fields = [
             'brain_id' => $this->brain(),
             'context_id' => (string) ($params['contextid'] ?? ''),
