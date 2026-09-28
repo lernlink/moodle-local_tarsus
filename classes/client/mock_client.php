@@ -97,6 +97,12 @@ class mock_client implements client_interface {
     public function retrieve_feed(array $params): array {
         $this->maybe_fail();
 
+        // The fixture is one page long: any older page is empty.
+        if ((int) ($params['offset'] ?? 0) > 0) {
+            return ['items' => [], 'rawcount' => 0,
+                'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'practiceprogress' => 60.0], 'credits' => 0];
+        }
+
         // A deterministic interleaved feed: the welcome, one chat exchange,
         // one answered practice question and one still open.
         return [
@@ -139,6 +145,7 @@ class mock_client implements client_interface {
                     'answer' => '',
                 ],
             ],
+            'rawcount' => 4,
             'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'practiceprogress' => 60.0],
             'credits' => 0,
         ];

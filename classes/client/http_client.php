@@ -143,7 +143,9 @@ class http_client implements client_interface {
             'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
             'taxonomy_levels' => json_encode(array_values($params['taxonomylevels'] ?? [])),
             // Selects WHICH page a long feed yields — the newest page_size
-            // widgets, not the oldest — without affecting order.
+            // widgets, not the oldest — without affecting order; offset then
+            // counts from the newest end, so offset=page_size is the page
+            // before it (verified live).
             'newest_first' => 'true',
         ]);
 
@@ -210,6 +212,9 @@ class http_client implements client_interface {
 
         return [
             'items' => $items,
+            // How many widgets the page held before classification: a full
+            // page means an older one may follow.
+            'rawcount' => count((array) ($body['activity']['widgets'] ?? [])),
             // The activity level carries the user's experience figures.
             'progress' => self::extract_progress((array) ($body['activity'] ?? []), []),
             // Reading widgets back generates nothing.

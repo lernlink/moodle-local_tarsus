@@ -221,10 +221,13 @@ interface client_interface {
      * to read, and callers refuse locally on an empty scope.
      *
      * Expected $params keys: contextid, userid, resourceids (non-empty
-     * string[]), taxonomylevels (int[]), offset (int), pagesize (int).
+     * string[]), taxonomylevels (int[]), offset (int, counted from the
+     * newest widget: pagesize reaches the page before the newest one),
+     * pagesize (int).
      *
      * @param array $params The retrieval parameters, as above.
-     * @return array Result with 'items' — an ordered list where each item
+     * @return array Result with 'rawcount' (how many widgets the page held;
+     *               a full page means an older page may follow), 'items' — an ordered list where each item
      *               is one of {kind: 'message', text}, {kind: 'exchange',
      *               query, answer} or {kind: 'practice', id, type, question,
      *               choices: string[], variables: string[], taxonomylevel,

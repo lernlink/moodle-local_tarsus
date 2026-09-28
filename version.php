@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026092905;
+$plugin->version   = 2026092906;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.9.0 (Operators, anti-cheat and learning pace on the wire)';
+$plugin->release   = '1.9.1 (Feed page size reported for lazy loading)';
