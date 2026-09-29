@@ -45,21 +45,6 @@ interface client_interface {
     ];
 
     /**
-     * Grounded retrieval: answer a query from tracked brain content.
-     *
-     * Retrieval is scoped by an explicit list of resource ids: only those may
-     * ground the answer. The brain treats an empty list as "no restriction",
-     * which would leak other courses' content on the shared brain — so callers
-     * must refuse locally instead of ever passing an empty list.
-     *
-     * @param string   $query              The learner question.
-     * @param string   $userid             Pseudonymised user id (analytics; never a real identity).
-     * @param string[] $allowedresourceids Non-empty list of resource ids allowed to ground the answer.
-     * @return array Result with 'answer', 'answered', 'sources' and 'credits'.
-     */
-    public function search_grounded(string $query, string $userid, array $allowedresourceids): array;
-
-    /**
      * Track (index) a resource into the brain.
      *
      * @param array $resource Resource descriptor (type, payload, resource_id, contextid).
@@ -120,9 +105,8 @@ interface client_interface {
     /**
      * Ask the activity chat (t0 surface) and return the assistant's answer.
      *
-     * Unlike {@see search_grounded()} this is a conversation: the brain keeps
-     * dialogue memory per (context_id, user_id), so each call only carries the
-     * new question. Retrieval is scoped by 'resourceids' with full brain
+     * This is a conversation: the brain keeps dialogue memory per
+     * (context_id, user_id), so each call only carries the new question. Retrieval is scoped by 'resourceids' with full brain
      * access off — verified live: an out-of-scope question is refused, and
      * with full access on the scope list is ignored entirely. An empty scope
      * must never reach the API; callers refuse locally.

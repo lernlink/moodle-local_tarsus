@@ -59,28 +59,6 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
-    public function search_grounded(string $query, string $userid, array $allowedresourceids): array {
-        $this->maybe_fail();
-
-        // Echo the allowed scope back as sources, so tests can assert that
-        // exactly the included resources were offered to the brain.
-        $sources = [];
-        foreach ($allowedresourceids as $i => $resourceid) {
-            $sources[] = [
-                'title' => 'Mock source ' . ($i + 1),
-                'resourceid' => (string) $resourceid,
-            ];
-        }
-
-        return [
-            'answer' => 'Mock grounded answer for: ' . $query,
-            'answered' => true,
-            'sources' => $sources,
-            'credits' => 6,
-        ];
-    }
-
-    #[\Override]
     public function track_resource(array $resource): array {
         $this->maybe_fail();
 

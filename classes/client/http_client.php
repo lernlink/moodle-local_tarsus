@@ -64,47 +64,6 @@ class http_client implements client_interface {
     }
 
     #[\Override]
-    public function search_grounded(string $query, string $userid, array $allowedresourceids): array {
-        $body = $this->send('POST', 'access/search/bits', [
-            'brain_id' => $this->brain(),
-            'query' => $query,
-            'user_id' => $userid,
-            'with_arguments' => 'true',
-            'allowed_resource_ids' => json_encode(array_values($allowedresourceids)),
-        ]);
-
-        $argument = $body['access']['arguments'][0] ?? [];
-        $answered = !empty($argument['answered']);
-
-        // The brain may return low-relevance bits even when it declined to
-        // answer, so sources are only reported for a grounded answer — and
-        // only ever from the allowed set, whatever came back.
-        $sources = [];
-        if ($answered) {
-            $allowed = array_flip($allowedresourceids);
-            foreach (($body['access']['bits'] ?? []) as $bit) {
-                $sourceid = (string) ($bit['metadata']['sourceId'] ?? '');
-                if ($sourceid === '' || !isset($allowed[$sourceid]) || isset($sources[$sourceid])) {
-                    continue;
-                }
-                $sources[$sourceid] = [
-                    'resourceid' => $sourceid,
-                    'title' => (string) ($bit['title'] ?? ''),
-                ];
-            }
-        }
-
-        return [
-            'answer' => (string) ($argument['text'] ?? ''),
-            'answered' => $answered,
-            'sources' => array_values($sources),
-            // Spec §6 prices a grounded answer at ~6 credits; the response
-            // itself carries no figure.
-            'credits' => 6,
-        ];
-    }
-
-    #[\Override]
     public function track_resource(array $resource): array {
         [$path, $params, $tempfile] = $this->build_track_request($resource);
 
