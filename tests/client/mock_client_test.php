@@ -123,6 +123,8 @@ final class mock_client_test extends \advanced_testcase {
         $this->assertStringContainsString('[method: micro-learning, gif: 1]', $result['items'][1]['slides'][0]['text']);
         $this->assertSame('left', $result['items'][1]['slides'][1]['imageposition']);
         $this->assertSame(10.0, $result['progress']['learnprogress']);
+        $this->assertSame(2.0, $result['progress']['earnedunits']);
+        $this->assertSame(24.0, $result['progress']['totalunits']);
     }
 
     /**

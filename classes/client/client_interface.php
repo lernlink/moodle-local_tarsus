@@ -155,7 +155,7 @@ interface client_interface {
      *               (its three column names as the brain localised them,
      *               to send back with the answer), taxonomylevel,
      *               difficultylevel}, with correctness information
-     *               stripped), 'progress' ({earnedxp, totalxp,
+     *               stripped), 'progress' ({earnedxp, totalxp, earnedunits, totalunits,
      *               practiceprogress}) and 'credits'.
      */
     public function generate_practice_widget(array $params): array;
@@ -204,7 +204,7 @@ interface client_interface {
      *               answers of a rule-of-three question), 'usertable' and
      *               'answertable' (the learner's and the model costing
      *               rows, the latter with rateverdict/amountverdict 1, -1
-     *               or 0 for given cells), 'progress' ({earnedxp, totalxp,
+     *               or 0 for given cells), 'progress' ({earnedxp, totalxp, earnedunits, totalunits,
      *               practiceprogress}) and 'credits'.
      */
     public function evaluate_practice_answer(array $params): array;
@@ -242,7 +242,7 @@ interface client_interface {
      *               table, usertable, answertable as in the generation and
      *               evaluation results}, or a learn item as returned by
      *               {@see generate_learn_widget()} —
-     *               'progress' ({earnedxp, totalxp, practiceprogress}) and
+     *               'progress' ({earnedxp, totalxp, earnedunits, totalunits, practiceprogress}) and
      *               'credits'.
      */
     public function retrieve_feed(array $params): array;

@@ -133,7 +133,8 @@ class mock_client implements client_interface {
                 ],
             ],
             'rawcount' => 5,
-            'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'practiceprogress' => 60.0],
+            'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'earnedunits' => 1.0, 'totalunits' => 24.0,
+                'practiceprogress' => 60.0, 'learnprogress' => 4.17, 'progress' => 32.08],
             'credits' => 0,
         ];
     }
@@ -314,7 +315,8 @@ class mock_client implements client_interface {
                     ],
                 ],
             ],
-            'progress' => ['earnedxp' => 0.0, 'totalxp' => 6.0, 'practiceprogress' => 0.0, 'learnprogress' => 10.0, 'progress' => 5.0],
+            'progress' => ['earnedxp' => 0.0, 'totalxp' => 6.0, 'earnedunits' => 2.0, 'totalunits' => 24.0,
+                'practiceprogress' => 0.0, 'learnprogress' => 10.0, 'progress' => 5.0],
             'credits' => 6,
         ];
     }
