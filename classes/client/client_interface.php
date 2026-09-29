@@ -178,7 +178,8 @@ interface client_interface {
      *
      * @param array $params The evaluation parameters, as above.
      * @return array Result with 'correct' (bool, or null when the endpoint
-     *               gave no verdict), 'feedback' (markdown), 'answer' (the
+     *               gave no verdict), 'score' (float 0-100, or null; partial
+     *               credit shows as a fraction), 'feedback' (markdown), 'answer' (the
      *               model answer, may be empty), 'choices' (list of {text,
      *               iscorrect, clarification}), 'answers' (list of
      *               {variable, answer, iscorrect, clarification} — the model
@@ -216,7 +217,7 @@ interface client_interface {
      *               query, answer} or {kind: 'practice', id, type, question,
      *               choices: string[], variables: string[], taxonomylevel,
      *               difficultylevel, answered: bool, correct: ?bool,
-     *               feedback, useranswer, useranswers: list of {variable,
+     *               score: ?float, feedback, useranswer, useranswers: list of {variable,
      *               answer}, answer, answers: list of {variable, answer},
      *               table, usertable, answertable as in the generation and
      *               evaluation results} —

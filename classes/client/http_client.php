@@ -141,6 +141,7 @@ class http_client implements client_interface {
                     'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
                     'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
                     'answered' => $answered,
+                    'score' => $answered ? (float) ($evaluation['score'] ?? 0) : null,
                     'correct' => $answered ? ((float) ($evaluation['score'] ?? 0) >= 50) : null,
                     'feedback' => $answered ? (string) ($evaluation['feedback'] ?? '') : '',
                     'useranswer' => $answered ? self::choice_text($evaluation['userAnswer'] ?? '') : '',
@@ -550,14 +551,18 @@ class http_client implements client_interface {
 
         $evaluation = (array) ($data['evaluation'] ?? []);
         $answer = (string) ($data['answer'] ?? '');
+        $score = null;
         if (!empty($evaluation['evaluated'])) {
-            $correct = (float) ($evaluation['score'] ?? 0) >= 50;
+            $score = (float) ($evaluation['score'] ?? 0);
+            $correct = $score >= 50;
             $feedback = (string) ($evaluation['feedback'] ?? $feedback);
             $answer = (string) ($evaluation['answer'] ?? $answer);
         }
 
         return [
             'correct' => $correct,
+            // The brain's score 0-100; partial credit shows as a fraction.
+            'score' => $score,
             'feedback' => $feedback,
             'answer' => self::choice_text($answer),
             'choices' => $choices,

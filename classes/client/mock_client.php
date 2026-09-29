@@ -103,6 +103,7 @@ class mock_client implements client_interface {
                     'taxonomylevel' => 'WISSEN',
                     'difficultylevel' => 1,
                     'answered' => true,
+                    'score' => 100.0,
                     'correct' => true,
                     'feedback' => '**Mock stored clarification.**',
                     'useranswer' => 'Alpha',
@@ -117,6 +118,7 @@ class mock_client implements client_interface {
                     'taxonomylevel' => 'VERSTEHEN',
                     'difficultylevel' => 2,
                     'answered' => false,
+                    'score' => null,
                     'correct' => null,
                     'feedback' => '',
                     'useranswer' => '',
@@ -301,6 +303,7 @@ class mock_client implements client_interface {
             }
             return [
                 'correct' => $correct,
+                'score' => $correct ? 100.0 : 50.0,
                 'feedback' => $correct ? '**Mock clarification:** the table adds up.' : '**Mock clarification:** check the marked amounts.',
                 'answer' => '',
                 'choices' => [],
@@ -331,6 +334,7 @@ class mock_client implements client_interface {
             }
             return [
                 'correct' => $correct,
+                'score' => $correct ? 100.0 : 50.0,
                 'feedback' => $correct ? '**Mock clarification:** all quantities right.' : '**Mock clarification:** check the highlighted quantities.',
                 'answer' => '',
                 'choices' => [],
@@ -343,6 +347,7 @@ class mock_client implements client_interface {
 
         return [
             'correct' => $correct,
+            'score' => $correct ? 100.0 : 0.0,
             'feedback' => $correct
                 ? '**Mock clarification:** well spotted.'
                 : '**Mock clarification:** the material says Alpha.',
