@@ -34,14 +34,19 @@ class transport_exception extends moodle_exception {
     /** @var int The HTTP status code (0 for a timeout / connection failure). */
     public int $httpstatus;
 
+    /** @var string The start of the response body on an HTTP error, for callers that recognise the brain's messages. */
+    public string $body;
+
     /**
      * Constructor.
      *
      * @param int    $httpstatus The HTTP status code, or 0 for timeout.
      * @param string $detail     Optional debugging detail.
+     * @param string $body       The start of the error response body, if any.
      */
-    public function __construct(int $httpstatus, string $detail = '') {
+    public function __construct(int $httpstatus, string $detail = '', string $body = '') {
         $this->httpstatus = $httpstatus;
+        $this->body = $body;
         parent::__construct('transporterror', 'local_tarsus', '', $httpstatus, $detail);
     }
 }

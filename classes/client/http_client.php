@@ -403,7 +403,18 @@ class http_client implements client_interface {
             $fields['industry'] = $industry;
         }
 
-        $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
+        try {
+            $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
+        } catch (transport_exception $e) {
+            // Verified live: when no question of the requested types can be
+            // built from the material, the brain answers 500 with this
+            // message rather than an empty list. That is "no question", not
+            // a transport failure.
+            if ($e->httpstatus === 500 && stripos($e->body, 'UNABLE TO CREATE WIDGETS') !== false) {
+                return ['widgets' => [], 'progress' => self::extract_progress([], []), 'credits' => 0];
+            }
+            throw $e;
+        }
 
         // One call may generate several questions (verified live: usually
         // two); every widget of a supported question type is returned, in
@@ -1013,7 +1024,10 @@ class http_client implements client_interface {
 
         $httpcode = (int) ($curl->get_info()['http_code'] ?? 0);
         if ($httpcode < 200 || $httpcode >= 300) {
-            throw new transport_exception($httpcode, 'unexpected HTTP status calling ' . $path);
+            // The brain explains some refusals in the body; keep its start
+            // (never the request, which carries the API key).
+            throw new transport_exception($httpcode, 'unexpected HTTP status calling ' . $path,
+                trim(substr((string) $response, 0, 300)));
         }
 
         $decoded = json_decode((string) $response, true);
