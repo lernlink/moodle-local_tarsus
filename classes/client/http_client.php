@@ -808,7 +808,7 @@ class http_client implements client_interface {
      *
      * @param array $activity   The response's activity object.
      * @param array $widgetdata The widget's bit.data, if any.
-     * @return array{earnedxp: float, totalxp: float, practiceprogress: float}
+     * @return array{earnedxp: float, totalxp: float, practiceprogress: float, learnprogress: float, progress: float}
      */
     private static function extract_progress(array $activity, array $widgetdata): array {
         $pick = static function (string $key) use ($activity, $widgetdata) {
@@ -817,7 +817,12 @@ class http_client implements client_interface {
         return [
             'earnedxp' => (float) $pick('earnedExperiencePoints'),
             'totalxp' => (float) $pick('totalExperiencePoints'),
+            // Three progress figures (verified live): the practice and the
+            // learn mode each have their own, and 'progress' is the overall
+            // one — their average — which the chat mode shows.
             'practiceprogress' => (float) $pick('practiceProgress'),
+            'learnprogress' => (float) $pick('learnProgress'),
+            'progress' => (float) $pick('progress'),
         ];
     }
 

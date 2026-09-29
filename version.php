@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026092907;
+$plugin->version   = 2026092908;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.9.2 (Legacy search/bits client retired)';
+$plugin->release   = '1.9.3 (Overall and learn progress figures reported)';
