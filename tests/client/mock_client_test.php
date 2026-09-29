@@ -57,7 +57,7 @@ final class mock_client_test extends \advanced_testcase {
             'resourceids' => ['site:1:mod_page:2:main'],
         ]);
 
-        $this->assertSame(['message', 'exchange', 'practice', 'practice'],
+        $this->assertSame(['message', 'exchange', 'practice', 'practice', 'stack'],
             array_column($result['items'], 'kind'));
 
         [$message, $exchange, $answered, $open] = $result['items'];
@@ -100,6 +100,29 @@ final class mock_client_test extends \advanced_testcase {
         $this->assertArrayNotHasKey('iscorrect', $widget);
         $this->assertSame('trueFalseQuestionWidget', $second['type']);
         $this->assertSame(6.0, $result['progress']['totalxp']);
+    }
+
+    /**
+     * The learn mock returns the objectives and one stack, echoing the
+     * didactic settings.
+     *
+     * @return void
+     */
+    public function test_generate_learn_widget_returns_objectives_and_a_stack(): void {
+        $client = new mock_client();
+        $result = $client->generate_learn_widget([
+            'resourceids' => ['site:1:mod_page:2:main'],
+            'learningmethod' => 'micro-learning',
+            'gif' => true,
+        ]);
+
+        $this->assertSame(['objectives', 'stack'], array_column($result['items'], 'kind'));
+        $this->assertCount(2, $result['items'][0]['objectives']);
+        $this->assertTrue($result['items'][0]['objectives'][1]['done']);
+        $this->assertCount(2, $result['items'][1]['slides']);
+        $this->assertStringContainsString('[method: micro-learning, gif: 1]', $result['items'][1]['slides'][0]['text']);
+        $this->assertSame('left', $result['items'][1]['slides'][1]['imageposition']);
+        $this->assertSame(10.0, $result['progress']['learnprogress']);
     }
 
     /**

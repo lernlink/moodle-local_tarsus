@@ -118,6 +118,11 @@ class http_client implements client_interface {
         // (welcome and friends) a 'message'.
         $items = [];
         foreach (($body['activity']['widgets'] ?? []) as $widget) {
+            $learn = self::learn_item($widget);
+            if ($learn !== null) {
+                $items[] = $learn;
+                continue;
+            }
             $bit = $widget['bit'] ?? [];
             $type = (string) ($bit['type'] ?? '');
             $data = (array) ($bit['data'] ?? []);
@@ -170,11 +175,23 @@ class http_client implements client_interface {
             }
         }
 
+        // The brain counts page_size in single widgets: a learning stack
+        // weighs as many as it has slides, and a stack may even straddle
+        // two pages (verified live: a three-slide stack came back as two
+        // slides on the older page and one on the newer). Counting slides
+        // here keeps the page-size test honest; the reader merges the
+        // straddling halves by stack id.
+        $rawcount = 0;
+        foreach (($body['activity']['widgets'] ?? []) as $widget) {
+            $rawcount += isset($widget['stackedWidgets']) && is_array($widget['stackedWidgets'])
+                ? max(1, count($widget['stackedWidgets'])) : 1;
+        }
+
         return [
             'items' => $items,
             // How many widgets the page held before classification: a full
             // page means an older one may follow.
-            'rawcount' => count((array) ($body['activity']['widgets'] ?? [])),
+            'rawcount' => $rawcount,
             // The activity level carries the user's experience figures.
             'progress' => self::extract_progress((array) ($body['activity'] ?? []), []),
             // Reading widgets back generates nothing.
@@ -459,6 +476,148 @@ class http_client implements client_interface {
             'progress' => self::extract_progress((array) ($body['activity'] ?? []), $widgetdata),
             'credits' => 6,
         ];
+    }
+
+    #[\Override]
+    public function generate_learn_widget(array $params): array {
+        // Same call as the practice, with state 'learn': the brain first
+        // sends the learning objectives, then one micro-learning stack per
+        // call. learning_method picks the didactic concept, gif allows
+        // animated illustrations.
+        $fields = [
+            'brain_id' => $this->brain(),
+            'context_id' => (string) ($params['contextid'] ?? ''),
+            'context_type' => 'tarsus_activity',
+            'context_name' => (string) ($params['contextname'] ?? ''),
+            'context_description' => (string) ($params['contextdescription'] ?? ''),
+            'robot_id' => (string) ($params['robotid'] ?? ''),
+            'robot_name' => (string) ($params['robotname'] ?? ''),
+            'robot_description' => (string) ($params['robotdescription'] ?? ''),
+            'user_id' => (string) ($params['userid'] ?? ''),
+            'user_name' => (string) ($params['username'] ?? ''),
+            'user_language' => (string) ($params['userlanguage'] ?? 'de'),
+            'state' => 'learn',
+            'default_robot' => 'true',
+            'input_modality' => 'text',
+            'conversation_style' => (string) (int) ($params['conversationstyle'] ?? 3),
+            'dqr' => (string) (int) ($params['dqr'] ?? 6),
+            'full_text_search' => !empty($params['fulltextsearch']) ? 'true' : 'false',
+            'full_brain_access' => 'false',
+            'operators' => self::operators($params),
+            'anti_cheat' => !empty($params['anticheat']) ? 'true' : 'false',
+            'learn_tempo' => self::learn_tempo($params),
+            'learning_method' => (string) ($params['learningmethod'] ?? 'micro-learning'),
+            'gif' => !empty($params['gif']) ? 'true' : 'false',
+            'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
+            'taxonomy_levels' => json_encode(array_values($params['taxonomylevels'] ?? [])),
+            'question_types' => self::encode_question_types($params['questiontypes'] ?? []),
+            'query' => '',
+        ];
+
+        $industry = trim((string) ($params['industry'] ?? ''));
+        if ($industry !== '') {
+            $fields['industry'] = $industry;
+        }
+
+        try {
+            $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
+        } catch (transport_exception $e) {
+            if ($e->httpstatus === 500 && stripos($e->body, 'UNABLE TO CREATE WIDGETS') !== false) {
+                return ['items' => [], 'progress' => self::extract_progress([], []), 'credits' => 0];
+            }
+            throw $e;
+        }
+
+        $items = [];
+        foreach (($body['activity']['widgets'] ?? []) as $widget) {
+            $item = self::learn_item($widget);
+            if ($item !== null) {
+                $items[] = $item;
+            }
+        }
+
+        return [
+            'items' => $items,
+            'progress' => self::extract_progress((array) ($body['activity'] ?? []), []),
+            'credits' => 6,
+        ];
+    }
+
+    /**
+     * Read one learn-mode widget: the learning objectives or a stack.
+     *
+     * Verified live: the objectives come as a learningObjectivesWidget
+     * (title, message, learningObjectives[]); a learning unit comes as
+     * {stackId, stackedWidgets[]} whose slides are micro-learning widgets
+     * with a title, Markdown text and optionally an illustration
+     * (data.image.imageBytes as a data URI, positioned left or right).
+     *
+     * @param array $widget One element of the widgets list.
+     * @return array|null The item ({kind: 'objectives'|'stack', ...}), or null for other widgets.
+     */
+    private static function learn_item(array $widget): ?array {
+        if (isset($widget['stackedWidgets']) && is_array($widget['stackedWidgets'])) {
+            $slides = [];
+            foreach ($widget['stackedWidgets'] as $slide) {
+                $bit = (array) ($slide['bit'] ?? []);
+                $data = (array) ($bit['data'] ?? []);
+                $text = (string) ($data['text'] ?? ($bit['text'] ?? ''));
+                $title = (string) ($data['title'] ?? ($bit['title'] ?? ''));
+                if ($text === '' && $title === '') {
+                    continue;
+                }
+                $image = (array) ($data['image'] ?? []);
+                $slides[] = [
+                    'id' => (string) ($slide['_id'] ?? ''),
+                    'title' => $title,
+                    'text' => $text,
+                    'image' => self::image_data_uri((string) ($image['imageBytes'] ?? '')),
+                    'imageposition' => strtolower((string) ($image['imagePosition'] ?? ($data['imagePosition'] ?? 'right'))) === 'left'
+                        ? 'left' : 'right',
+                ];
+            }
+            return [
+                'kind' => 'stack',
+                'id' => (string) ($widget['stackId'] ?? ''),
+                'slides' => $slides,
+            ];
+        }
+
+        $bit = (array) ($widget['bit'] ?? []);
+        if ((string) ($bit['type'] ?? '') === 'learningObjectivesWidget') {
+            $data = (array) ($bit['data'] ?? []);
+            $objectives = [];
+            foreach ((array) ($data['learningObjectives'] ?? []) as $objective) {
+                if (!is_array($objective)) {
+                    continue;
+                }
+                $objectives[] = [
+                    'id' => (string) ($objective['_id'] ?? ''),
+                    'objective' => (string) ($objective['objective'] ?? ''),
+                    'taxonomylevel' => (string) ($objective['taxonomyLevel'] ?? ''),
+                    'done' => !empty($objective['done']),
+                ];
+            }
+            return [
+                'kind' => 'objectives',
+                'id' => (string) ($widget['_id'] ?? ''),
+                'title' => (string) ($data['title'] ?? ($bit['title'] ?? '')),
+                'message' => (string) ($data['message'] ?? ($bit['text'] ?? '')),
+                'objectives' => $objectives,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Accept an illustration only as a base64 image data URI.
+     *
+     * @param string $value The image bytes field.
+     * @return string The data URI, or '' when it is anything else.
+     */
+    private static function image_data_uri(string $value): string {
+        return preg_match('~^data:image/(svg\+xml|png|jpeg|gif|webp);base64,[A-Za-z0-9+/=\s]+$~', $value) ? $value : '';
     }
 
     #[\Override]

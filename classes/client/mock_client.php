@@ -124,8 +124,15 @@ class mock_client implements client_interface {
                     'useranswer' => '',
                     'answer' => '',
                 ],
+                [
+                    'kind' => 'stack',
+                    'id' => 'mock-stack-0',
+                    'slides' => [
+                        ['id' => 'mock-slide-a', 'title' => 'Stored slide', 'text' => 'A **stored** slide.', 'image' => '', 'imageposition' => 'right'],
+                    ],
+                ],
             ],
-            'rawcount' => 4,
+            'rawcount' => 5,
             'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'practiceprogress' => 60.0],
             'credits' => 0,
         ];
@@ -274,6 +281,40 @@ class mock_client implements client_interface {
                 ],
             ],
             'progress' => ['earnedxp' => 0.0, 'totalxp' => 6.0, 'practiceprogress' => 0.0],
+            'credits' => 6,
+        ];
+    }
+
+    #[\Override]
+    public function generate_learn_widget(array $params): array {
+        $this->maybe_fail();
+
+        // The objectives, then one stack — both at once, so tests see each.
+        return [
+            'items' => [
+                [
+                    'kind' => 'objectives',
+                    'id' => 'mock-objectives',
+                    'title' => 'Mock learning goals',
+                    'message' => 'Build **mock** knowledge step by step.',
+                    'objectives' => [
+                        ['id' => 'mock-goal-1', 'objective' => 'Name the mock basics.', 'taxonomylevel' => 'WISSEN', 'done' => false],
+                        ['id' => 'mock-goal-2', 'objective' => 'Explain the mock rules.', 'taxonomylevel' => 'VERSTEHEN', 'done' => true],
+                    ],
+                ],
+                [
+                    'kind' => 'stack',
+                    'id' => 'mock-stack-1',
+                    'slides' => [
+                        ['id' => 'mock-slide-1', 'title' => 'First slide', 'text' => 'The **first** mock slide'
+                            . ' [method: ' . (string) ($params['learningmethod'] ?? '') . ', gif: ' . (int) !empty($params['gif']) . ']',
+                            'image' => '', 'imageposition' => 'right'],
+                        ['id' => 'mock-slide-2', 'title' => 'Second slide', 'text' => 'The second mock slide.',
+                            'image' => 'data:image/svg+xml;base64,PHN2Zy8+', 'imageposition' => 'left'],
+                    ],
+                ],
+            ],
+            'progress' => ['earnedxp' => 0.0, 'totalxp' => 6.0, 'practiceprogress' => 0.0, 'learnprogress' => 10.0, 'progress' => 5.0],
             'credits' => 6,
         ];
     }

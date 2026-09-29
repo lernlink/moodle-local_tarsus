@@ -161,6 +161,24 @@ interface client_interface {
     public function generate_practice_widget(array $params): array;
 
     /**
+     * Generate the next learning unit (Build knowledge mode).
+     *
+     * Same endpoint and scope rules as {@see generate_practice_widget()},
+     * with state 'learn': the first call yields the learning objectives, each
+     * further call one micro-learning stack of slides. Expected $params keys:
+     * those of {@see generate_practice_widget()} plus learningmethod (string,
+     * e.g. 'micro-learning') and gif (bool).
+     *
+     * @param array $params The generation parameters, as above.
+     * @return array Result with 'items' — {kind: 'objectives', id, title,
+     *               message, objectives: list of {id, objective,
+     *               taxonomylevel, done}} or {kind: 'stack', id, slides: list
+     *               of {id, title, text (markdown), image (data URI or ''),
+     *               imageposition}} — 'progress' and 'credits'.
+     */
+    public function generate_learn_widget(array $params): array;
+
+    /**
      * Evaluate a learner's answer to a practice question widget.
      *
      * Routes to the per-type evaluate endpoint. The response reveals the
@@ -211,8 +229,10 @@ interface client_interface {
      * pagesize (int).
      *
      * @param array $params The retrieval parameters, as above.
-     * @return array Result with 'rawcount' (how many widgets the page held;
-     *               a full page means an older page may follow), 'items' — an ordered list where each item
+     * @return array Result with 'rawcount' (how many widgets the page held,
+     *               a stack counting one per slide; a full page means an
+     *               older page may follow — and a stack may straddle two
+     *               pages, returned under the same id on both), 'items' — an ordered list where each item
      *               is one of {kind: 'message', text}, {kind: 'exchange',
      *               query, answer} or {kind: 'practice', id, type, question,
      *               choices: string[], variables: string[], taxonomylevel,
@@ -220,7 +240,8 @@ interface client_interface {
      *               score: ?float, feedback, useranswer, useranswers: list of {variable,
      *               answer}, answer, answers: list of {variable, answer},
      *               table, usertable, answertable as in the generation and
-     *               evaluation results} —
+     *               evaluation results}, or a learn item as returned by
+     *               {@see generate_learn_widget()} —
      *               'progress' ({earnedxp, totalxp, practiceprogress}) and
      *               'credits'.
      */
