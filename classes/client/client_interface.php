@@ -172,9 +172,12 @@ interface client_interface {
      * @param array $params The generation parameters, as above.
      * @return array Result with 'items' — {kind: 'objectives', id, title,
      *               message, objectives: list of {id, objective,
-     *               taxonomylevel, done}} or {kind: 'stack', id, slides: list
+     *               taxonomylevel, done}}, {kind: 'stack', id, slides: list
      *               of {id, title, text (markdown), image (data URI or ''),
-     *               imageposition}} — 'progress' and 'credits'.
+     *               imageposition}}, {kind: 'complete', id, text} once every
+     *               objective is done (progress.learnprogress reads 100 from
+     *               then on) or {kind: 'message', text} — 'progress' and
+     *               'credits'.
      */
     public function generate_learn_widget(array $params): array;
 

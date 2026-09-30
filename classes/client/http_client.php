@@ -531,6 +531,12 @@ class http_client implements client_interface {
         $items = [];
         foreach (($body['activity']['widgets'] ?? []) as $widget) {
             $item = self::learn_item($widget);
+            if ($item === null) {
+                // Anything else with a text is a plain message, such as
+                // the step-transition note between two objectives.
+                $text = (string) ($widget['bit']['text'] ?? '');
+                $item = $text !== '' ? ['kind' => 'message', 'text' => $text] : null;
+            }
             if ($item !== null) {
                 $items[] = $item;
             }
@@ -553,7 +559,7 @@ class http_client implements client_interface {
      * (data.image.imageBytes as a data URI, positioned left or right).
      *
      * @param array $widget One element of the widgets list.
-     * @return array|null The item ({kind: 'objectives'|'stack', ...}), or null for other widgets.
+     * @return array|null The item ({kind: 'objectives'|'stack'|'complete', ...}), or null for other widgets.
      */
     private static function learn_item(array $widget): ?array {
         if (isset($widget['stackedWidgets']) && is_array($widget['stackedWidgets'])) {
@@ -584,6 +590,15 @@ class http_client implements client_interface {
         }
 
         $bit = (array) ($widget['bit'] ?? []);
+        if ((string) ($bit['type'] ?? '') === 'courseCompleteWidget') {
+            // The brain's farewell once every objective is done (verified
+            // live): learnProgress reads 100 from here on.
+            return [
+                'kind' => 'complete',
+                'id' => (string) ($widget['_id'] ?? ''),
+                'text' => (string) ($bit['text'] ?? ''),
+            ];
+        }
         if ((string) ($bit['type'] ?? '') === 'learningObjectivesWidget') {
             $data = (array) ($bit['data'] ?? []);
             $objectives = [];

@@ -57,7 +57,7 @@ final class mock_client_test extends \advanced_testcase {
             'resourceids' => ['site:1:mod_page:2:main'],
         ]);
 
-        $this->assertSame(['message', 'exchange', 'practice', 'practice', 'stack'],
+        $this->assertSame(['message', 'exchange', 'practice', 'practice', 'stack', 'complete'],
             array_column($result['items'], 'kind'));
 
         [$message, $exchange, $answered, $open] = $result['items'];
