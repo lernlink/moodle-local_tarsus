@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026092913;
+$plugin->version   = 2026100600;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.10.2 (Course completion widget)';
+$plugin->release   = '1.10.3 (Report bits carry their last status change)';

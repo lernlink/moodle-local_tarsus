@@ -95,7 +95,8 @@ class course_report {
      * Resolve a module's bits and attach each one's current status.
      *
      * @param \cm_info $cm The course module.
-     * @return array<int, array{resourceid: string, title: string, type: string, status: string, statuslabel: string}>
+     * @return array<int, array{resourceid: string, title: string, type: string, status: string, statuslabel: string,
+     *                          timemodified: int}>
      */
     private function bits_for(\cm_info $cm): array {
         $bits = [];
@@ -108,6 +109,9 @@ class course_report {
                 'type' => $material->type,
                 'status' => $statusvalue,
                 'statuslabel' => status::label($statusvalue),
+                // When the row last changed state: lets the dashboard tell a
+                // fresh "awaiting confirmation" from one the brain forgot.
+                'timemodified' => $row ? (int) $row->timemodified : 0,
             ];
         }
         return $bits;
