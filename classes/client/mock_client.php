@@ -128,7 +128,8 @@ class mock_client implements client_interface {
                     'kind' => 'stack',
                     'id' => 'mock-stack-0',
                     'slides' => [
-                        ['id' => 'mock-slide-a', 'title' => 'Stored slide', 'text' => 'A **stored** slide.', 'image' => '', 'imageposition' => 'right'],
+                        ['id' => 'mock-slide-a', 'kind' => 'text', 'title' => 'Stored slide', 'text' => 'A **stored** slide.',
+                            'image' => '', 'imageposition' => 'right'],
                     ],
                 ],
                 ['kind' => 'complete', 'id' => 'mock-complete', 'text' => 'You have **completed** the mock course.'],
@@ -308,11 +309,19 @@ class mock_client implements client_interface {
                     'kind' => 'stack',
                     'id' => 'mock-stack-1',
                     'slides' => [
-                        ['id' => 'mock-slide-1', 'title' => 'First slide', 'text' => 'The **first** mock slide'
+                        ['id' => 'mock-slide-1', 'kind' => 'text', 'title' => 'First slide', 'text' => 'The **first** mock slide'
                             . ' [method: ' . (string) ($params['learningmethod'] ?? '') . ', gif: ' . (int) !empty($params['gif']) . ']',
                             'image' => '', 'imageposition' => 'right'],
-                        ['id' => 'mock-slide-2', 'title' => 'Second slide', 'text' => 'The second mock slide.',
+                        ['id' => 'mock-slide-2', 'kind' => 'text', 'title' => 'Second slide', 'text' => 'The second mock slide.',
                             'image' => 'data:image/svg+xml;base64,PHN2Zy8+', 'imageposition' => 'left'],
+                        ['id' => 'mock-learn-q', 'kind' => 'question', 'title' => '', 'text' => '', 'image' => '', 'imageposition' => 'right',
+                            'question' => [
+                                'kind' => 'practice', 'id' => 'mock-learn-q', 'type' => 'singleChoiceQuestionWidget',
+                                'question' => 'Which mock answer is right?', 'choices' => ['Alpha', 'Beta'], 'variables' => [],
+                                'table' => [], 'columns' => [], 'taxonomylevel' => 'WISSEN', 'difficultylevel' => 1,
+                                'answered' => false, 'score' => null, 'correct' => null, 'feedback' => '', 'useranswer' => '',
+                                'useranswers' => [], 'answer' => '', 'answers' => [], 'usertable' => [], 'answertable' => [],
+                            ]],
                     ],
                 ],
             ],
@@ -383,7 +392,9 @@ class mock_client implements client_interface {
                 'answer' => '',
                 'choices' => [],
                 'answers' => $answers,
-                'progress' => ['earnedxp' => $correct ? 1.0 : 0.0, 'totalxp' => 6.0, 'practiceprogress' => $correct ? 16.67 : 0.0],
+                'progress' => ['earnedxp' => $correct ? 1.0 : 0.0, 'totalxp' => 6.0, 'practiceprogress' => $correct ? 16.67 : 0.0,
+                    // A learning unit's check question pays out units instead.
+                    'earnedunits' => (($params['state'] ?? '') === 'learn' && $correct) ? 1.0 : 0.0, 'totalunits' => 6.0],
                 'credits' => 6,
             ];
         }
@@ -406,6 +417,9 @@ class mock_client implements client_interface {
             'progress' => [
                 'earnedxp' => $correct ? 1.0 : 0.0,
                 'totalxp' => 6.0,
+                // A learning unit's check question pays out units instead.
+                'earnedunits' => (($params['state'] ?? '') === 'learn' && $correct) ? 1.0 : 0.0,
+                'totalunits' => 6.0,
                 'practiceprogress' => $correct ? 16.67 : 0.0,
             ],
             'credits' => 6,

@@ -173,8 +173,10 @@ interface client_interface {
      * @return array Result with 'items' — {kind: 'objectives', id, title,
      *               message, objectives: list of {id, objective,
      *               taxonomylevel, done}}, {kind: 'stack', id, slides: list
-     *               of {id, title, text (markdown), image (data URI or ''),
-     *               imageposition}}, {kind: 'complete', id, text} once every
+     *               of {id, kind: 'text', title, text (markdown), image (data
+     *               URI or ''), imageposition} or {id, kind: 'question',
+     *               question: a 'practice' item as in retrieve_feed()} — the
+     *               unit's check question}, {kind: 'complete', id, text} once every
      *               objective is done (progress.learnprogress reads 100 from
      *               then on) or {kind: 'message', text} — 'progress' and
      *               'credits'.
@@ -191,6 +193,8 @@ interface client_interface {
      * robotid, robotname, robotdescription, userid, username, userlanguage,
      * resourceids (non-empty string[]), taxonomylevels (int[]), widgetid,
      * widgettype (one of {@see QUESTION_WIDGET_TYPES}), and the answer:
+     * state ('practice' default, or 'learn' for a learning unit's check
+     * question — the brain then credits learning units instead of XP),
      * useranswer (string) for single-answer types, useranswers (list of
      * {variable, answer}) for a rule-of-three question, or usertable (list
      * of {position, rate, amount}, every row of the costing table with the

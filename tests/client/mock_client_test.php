@@ -119,7 +119,8 @@ final class mock_client_test extends \advanced_testcase {
         $this->assertSame(['objectives', 'stack'], array_column($result['items'], 'kind'));
         $this->assertCount(2, $result['items'][0]['objectives']);
         $this->assertTrue($result['items'][0]['objectives'][1]['done']);
-        $this->assertCount(2, $result['items'][1]['slides']);
+        $this->assertSame(['text', 'text', 'question'], array_column($result['items'][1]['slides'], 'kind'));
+        $this->assertSame('singleChoiceQuestionWidget', $result['items'][1]['slides'][2]['question']['type']);
         $this->assertStringContainsString('[method: micro-learning, gif: 1]', $result['items'][1]['slides'][0]['text']);
         $this->assertSame('left', $result['items'][1]['slides'][1]['imageposition']);
         $this->assertSame(10.0, $result['progress']['learnprogress']);
@@ -139,6 +140,10 @@ final class mock_client_test extends \advanced_testcase {
         $this->assertTrue($right['correct']);
         $this->assertSame('Alpha', $right['answer']);
         $this->assertSame(1.0, $right['progress']['earnedxp']);
+        $this->assertSame(0.0, $right['progress']['earnedunits']);
+
+        $learn = $client->evaluate_practice_answer(['widgetid' => 'q', 'useranswer' => 'Alpha', 'state' => 'learn']);
+        $this->assertSame(1.0, $learn['progress']['earnedunits']);
 
         $wrong = $client->evaluate_practice_answer(['widgetid' => 'mock-widget-1', 'useranswer' => 'Beta']);
         $this->assertFalse($wrong['correct']);

@@ -128,34 +128,7 @@ class http_client implements client_interface {
             $data = (array) ($bit['data'] ?? []);
 
             if (in_array($type, self::QUESTION_WIDGET_TYPES, true)) {
-                $choices = [];
-                foreach (($data['choices'] ?? []) as $choice) {
-                    $choices[] = self::choice_text($choice['choice'] ?? '');
-                }
-                $evaluation = (array) ($data['evaluation'] ?? []);
-                $answered = !empty($evaluation['evaluated']);
-                $items[] = [
-                    'kind' => 'practice',
-                    'id' => (string) ($widget['_id'] ?? ''),
-                    'type' => $type,
-                    'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
-                    'choices' => $choices,
-                    'variables' => self::variables_of($data),
-                    'table' => self::question_table($data),
-                    'columns' => self::table_columns((array) ($data['questionTable'] ?? [])),
-                    'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
-                    'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
-                    'answered' => $answered,
-                    'score' => $answered ? (float) ($evaluation['score'] ?? 0) : null,
-                    'correct' => $answered ? ((float) ($evaluation['score'] ?? 0) >= 50) : null,
-                    'feedback' => $answered ? (string) ($evaluation['feedback'] ?? '') : '',
-                    'useranswer' => $answered ? self::choice_text($evaluation['userAnswer'] ?? '') : '',
-                    'useranswers' => $answered ? self::variable_answers($evaluation['userVariables'] ?? []) : [],
-                    'answer' => $answered ? self::choice_text($evaluation['answer'] ?? ($data['answer'] ?? '')) : '',
-                    'answers' => $answered ? self::variable_verdicts($data) : [],
-                    'usertable' => $answered ? self::table_rows($evaluation['userTable'] ?? []) : [],
-                    'answertable' => $answered ? self::table_verdicts($data) : [],
-                ];
+                $items[] = self::question_item($widget, $type, $data);
                 continue;
             }
 
@@ -550,6 +523,47 @@ class http_client implements client_interface {
     }
 
     /**
+     * Shape one stored question widget — in the feed or inside a learning
+     * stack — as a 'practice' item, answered ones carrying their verdict
+     * from data.evaluation, unanswered ones with correctness stripped.
+     *
+     * @param array  $widget The widget as the brain stores it.
+     * @param string $type   Its question widget type.
+     * @param array  $data   Its bit data.
+     * @return array The practice item.
+     */
+    private static function question_item(array $widget, string $type, array $data): array {
+        $choices = [];
+        foreach (($data['choices'] ?? []) as $choice) {
+            $choices[] = self::choice_text($choice['choice'] ?? '');
+        }
+        $evaluation = (array) ($data['evaluation'] ?? []);
+        $answered = !empty($evaluation['evaluated']);
+return [
+    'kind' => 'practice',
+            'id' => (string) ($widget['_id'] ?? ''),
+            'type' => $type,
+            'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
+            'choices' => $choices,
+            'variables' => self::variables_of($data),
+            'table' => self::question_table($data),
+            'columns' => self::table_columns((array) ($data['questionTable'] ?? [])),
+            'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
+            'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
+            'answered' => $answered,
+            'score' => $answered ? (float) ($evaluation['score'] ?? 0) : null,
+            'correct' => $answered ? ((float) ($evaluation['score'] ?? 0) >= 50) : null,
+            'feedback' => $answered ? (string) ($evaluation['feedback'] ?? '') : '',
+            'useranswer' => $answered ? self::choice_text($evaluation['userAnswer'] ?? '') : '',
+            'useranswers' => $answered ? self::variable_answers($evaluation['userVariables'] ?? []) : [],
+            'answer' => $answered ? self::choice_text($evaluation['answer'] ?? ($data['answer'] ?? '')) : '',
+            'answers' => $answered ? self::variable_verdicts($data) : [],
+            'usertable' => $answered ? self::table_rows($evaluation['userTable'] ?? []) : [],
+            'answertable' => $answered ? self::table_verdicts($data) : [],
+        ];
+    }
+
+    /**
      * Read one learn-mode widget: the learning objectives or a stack.
      *
      * Verified live: the objectives come as a learningObjectivesWidget
@@ -567,6 +581,22 @@ class http_client implements client_interface {
             foreach ($widget['stackedWidgets'] as $slide) {
                 $bit = (array) ($slide['bit'] ?? []);
                 $data = (array) ($bit['data'] ?? []);
+                $type = (string) ($bit['type'] ?? '');
+                if (in_array($type, self::QUESTION_WIDGET_TYPES, true)) {
+                    // The unit's check question (verified live: usually the
+                    // last slide, sometimes mid-stack too). Answering it with
+                    // state 'learn' is what earns the learning units.
+                    $slides[] = [
+                        'id' => (string) ($slide['_id'] ?? ''),
+                        'kind' => 'question',
+                        'title' => '',
+                        'text' => '',
+                        'image' => '',
+                        'imageposition' => 'right',
+                        'question' => self::question_item($slide, $type, $data),
+                    ];
+                    continue;
+                }
                 $text = (string) ($data['text'] ?? ($bit['text'] ?? ''));
                 $title = (string) ($data['title'] ?? ($bit['title'] ?? ''));
                 if ($text === '' && $title === '') {
@@ -575,6 +605,7 @@ class http_client implements client_interface {
                 $image = (array) ($data['image'] ?? []);
                 $slides[] = [
                     'id' => (string) ($slide['_id'] ?? ''),
+                    'kind' => 'text',
                     'title' => $title,
                     'text' => $text,
                     'image' => self::image_data_uri((string) ($image['imageBytes'] ?? '')),
@@ -663,7 +694,10 @@ class http_client implements client_interface {
             'user_id' => (string) ($params['userid'] ?? ''),
             'user_name' => (string) ($params['username'] ?? ''),
             'user_language' => (string) ($params['userlanguage'] ?? 'de'),
-            'state' => 'practice',
+            // 'learn' evaluates a learning unit's check question and earns
+            // learning units; 'practice' earns experience points (verified
+            // live on the same question).
+            'state' => (($params['state'] ?? '') === 'learn') ? 'learn' : 'practice',
             'input_modality' => 'text',
             'learn_tempo' => self::learn_tempo($params),
             'resource_ids' => json_encode(array_values($params['resourceids'] ?? [])),
