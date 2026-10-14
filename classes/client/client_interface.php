@@ -119,9 +119,10 @@ interface client_interface {
      * or 'ihk'), anticheat (bool), learntempo (float 0.1-2).
      *
      * @param array $params The conversation parameters, as above.
-     * @return array Result with 'answer' (markdown), 'messages' (markdown
-     *               strings from informational widgets, e.g. the welcome on a
-     *               conversation's first call) and 'credits'.
+     * @return array Result with 'answer' (markdown), 'messages' (list of
+     *               {title, text (markdown)} from informational widgets, e.g.
+     *               the welcome on a conversation's first call, titled with
+     *               the activity's name) and 'credits'.
      */
     public function generate_widgets(array $params): array;
 
@@ -241,7 +242,7 @@ interface client_interface {
      *               a stack counting one per slide; a full page means an
      *               older page may follow — and a stack may straddle two
      *               pages, returned under the same id on both), 'items' — an ordered list where each item
-     *               is one of {kind: 'message', text}, {kind: 'exchange',
+     *               is one of {kind: 'message', title, text}, {kind: 'exchange',
      *               query, answer} or {kind: 'practice', id, type, question,
      *               choices: string[], variables: string[], taxonomylevel,
      *               difficultylevel, answered: bool, correct: ?bool,

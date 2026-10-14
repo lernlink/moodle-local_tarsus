@@ -144,7 +144,7 @@ class http_client implements client_interface {
 
             $text = (string) ($bit['text'] ?? '');
             if ($text !== '') {
-                $items[] = ['kind' => 'message', 'text' => $text];
+                $items[] = ['kind' => 'message', 'title' => (string) ($bit['title'] ?? ''), 'text' => $text];
             }
         }
 
@@ -340,7 +340,8 @@ class http_client implements client_interface {
             }
             $text = (string) ($bit['text'] ?? '');
             if ($text !== '') {
-                $messages[] = $text;
+                // The welcome carries the activity's name as its title.
+                $messages[] = ['title' => (string) ($bit['title'] ?? ''), 'text' => $text];
             }
         }
 
@@ -508,7 +509,8 @@ class http_client implements client_interface {
                 // Anything else with a text is a plain message, such as
                 // the step-transition note between two objectives.
                 $text = (string) ($widget['bit']['text'] ?? '');
-                $item = $text !== '' ? ['kind' => 'message', 'text' => $text] : null;
+                $item = $text !== ''
+                    ? ['kind' => 'message', 'title' => (string) ($widget['bit']['title'] ?? ''), 'text' => $text] : null;
             }
             if ($item !== null) {
                 $items[] = $item;

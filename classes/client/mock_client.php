@@ -87,6 +87,7 @@ class mock_client implements client_interface {
             'items' => [
                 [
                     'kind' => 'message',
+                    'title' => 'Mock activity',
                     'text' => '**Mock welcome** to the activity chat!',
                 ],
                 [
@@ -241,7 +242,7 @@ class mock_client implements client_interface {
                 . ', dqr: ' . (int) ($params['dqr'] ?? 0) . ']',
             // Informational widgets (e.g. the welcome) are relayed as-is;
             // when and how often they appear is Tarsus's decision.
-            'messages' => ['**Mock welcome** to the activity chat!'],
+            'messages' => [['title' => 'Mock activity', 'text' => '**Mock welcome** to the activity chat!']],
             'credits' => 6,
         ];
     }
