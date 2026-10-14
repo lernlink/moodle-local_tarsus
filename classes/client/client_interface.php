@@ -176,10 +176,11 @@ interface client_interface {
      *               of {id, kind: 'text', title, text (markdown), image (data
      *               URI, https URL or ''), imageposition} or {id, kind: 'question',
      *               question: a 'practice' item as in retrieve_feed()} — the
-     *               unit's check question}, {kind: 'complete', id, text} once every
-     *               objective is done (progress.learnprogress reads 100 from
-     *               then on) or {kind: 'message', text} — 'progress' and
-     *               'credits'.
+     *               unit's check question}, {kind: 'complete', id, title, text}
+     *               once every objective is done (progress.learnprogress reads
+     *               100 from then on), {kind: 'motivation', id, title, text} —
+     *               the encouragement between two objectives — or {kind:
+     *               'message', text} — 'progress' and 'credits'.
      */
     public function generate_learn_widget(array $params): array;
 

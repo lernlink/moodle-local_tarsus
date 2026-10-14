@@ -573,7 +573,7 @@ return [
      * (data.image.imageBytes as a data URI, positioned left or right).
      *
      * @param array $widget One element of the widgets list.
-     * @return array|null The item ({kind: 'objectives'|'stack'|'complete', ...}), or null for other widgets.
+     * @return array|null The item ({kind: 'objectives'|'stack'|'complete'|'motivation', ...}), or null for other widgets.
      */
     private static function learn_item(array $widget): ?array {
         if (isset($widget['stackedWidgets']) && is_array($widget['stackedWidgets'])) {
@@ -622,16 +622,29 @@ return [
         }
 
         $bit = (array) ($widget['bit'] ?? []);
-        if ((string) ($bit['type'] ?? '') === 'courseCompleteWidget') {
+        $type = (string) ($bit['type'] ?? '');
+        if ($type === 'courseCompleteWidget' || $type === 'successWidget') {
             // The brain's farewell once every objective is done (verified
-            // live): learnProgress reads 100 from here on.
+            // live): learnProgress reads 100 from here on. Tarsus calls
+            // this the success widget.
             return [
                 'kind' => 'complete',
                 'id' => (string) ($widget['_id'] ?? ''),
+                'title' => (string) ($bit['title'] ?? ''),
                 'text' => (string) ($bit['text'] ?? ''),
             ];
         }
-        if ((string) ($bit['type'] ?? '') === 'learningObjectivesWidget') {
+        if ($type === 'skipContentWidget' || $type === 'motivationWidget') {
+            // The encouragement between two learning objectives (verified
+            // live as skipContentWidget; the motivation widget in Tarsus).
+            return [
+                'kind' => 'motivation',
+                'id' => (string) ($widget['_id'] ?? ''),
+                'title' => (string) ($bit['title'] ?? ''),
+                'text' => (string) ($bit['text'] ?? ''),
+            ];
+        }
+        if ($type === 'learningObjectivesWidget') {
             $data = (array) ($bit['data'] ?? []);
             $objectives = [];
             foreach ((array) ($data['learningObjectives'] ?? []) as $objective) {
