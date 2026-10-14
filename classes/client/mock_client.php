@@ -311,10 +311,10 @@ class mock_client implements client_interface {
                     'kind' => 'stack',
                     'id' => 'mock-stack-1',
                     'slides' => [
-                        ['id' => 'mock-slide-1', 'kind' => 'text', 'title' => 'First slide', 'text' => 'The **first** mock slide'
+                        ['id' => 'mock-slide-1', 'kind' => 'text', 'taxonomylevel' => 'WISSEN', 'title' => 'First slide', 'text' => 'The **first** mock slide'
                             . ' [method: ' . (string) ($params['learningmethod'] ?? '') . ', gif: ' . (int) !empty($params['gif']) . ']',
                             'image' => '', 'imageposition' => 'right'],
-                        ['id' => 'mock-slide-2', 'kind' => 'text', 'title' => 'Second slide', 'text' => 'The second mock slide.',
+                        ['id' => 'mock-slide-2', 'kind' => 'text', 'taxonomylevel' => 'VERSTEHEN', 'title' => 'Second slide', 'text' => 'The second mock slide.',
                             'image' => 'data:image/svg+xml;base64,PHN2Zy8+', 'imageposition' => 'left'],
                         ['id' => 'mock-learn-q', 'kind' => 'question', 'title' => '', 'text' => '', 'image' => '', 'imageposition' => 'right',
                             'question' => [

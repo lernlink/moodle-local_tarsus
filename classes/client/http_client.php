@@ -608,6 +608,7 @@ return [
                 $slides[] = [
                     'id' => (string) ($slide['_id'] ?? ''),
                     'kind' => 'text',
+                    'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
                     'title' => $title,
                     'text' => $text,
                     'image' => self::image_source(

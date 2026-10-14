@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026101402;
+$plugin->version   = 2026101403;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.11.3 (Informational messages carry their title)';
+$plugin->release   = '1.11.4 (Slides carry their taxonomy level)';

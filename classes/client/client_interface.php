@@ -174,8 +174,9 @@ interface client_interface {
      * @return array Result with 'items' — {kind: 'objectives', id, title,
      *               message, objectives: list of {id, objective,
      *               taxonomylevel, done}}, {kind: 'stack', id, slides: list
-     *               of {id, kind: 'text', title, text (markdown), image (data
-     *               URI, https URL or ''), imageposition} or {id, kind: 'question',
+     *               of {id, kind: 'text', taxonomylevel (e.g. 'WISSEN'), title,
+     *               text (markdown), image (data URI, https URL or ''),
+     *               imageposition} or {id, kind: 'question',
      *               question: a 'practice' item as in retrieve_feed()} — the
      *               unit's check question}, {kind: 'complete', id, title, text}
      *               once every objective is done (progress.learnprogress reads
