@@ -129,6 +129,20 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
+     * The audio mock narrates a stack as a small valid WAV.
+     *
+     * @return void
+     */
+    public function test_generate_stack_audio_returns_wav(): void {
+        $client = new mock_client();
+        $result = $client->generate_stack_audio(['stackid' => 's1', 'voice' => 'Sara']);
+
+        $this->assertSame('audio/wav', $result['mimetype']);
+        $this->assertSame('Sara', $result['voice']);
+        $this->assertStringStartsWith('RIFF', base64_decode($result['audio']));
+    }
+
+    /**
      * The practice mock judges the fixture answer and pays out experience.
      *
      * @return void

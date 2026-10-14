@@ -173,6 +173,42 @@ class http_client implements client_interface {
     }
 
     #[\Override]
+    public function generate_stack_audio(array $params): array {
+        // Verified live: ~11 s for a three-slide stack, a RIFF/WAVE file of
+        // about 1.6 MB as base64 in data.audioBytes, with data.mimeType.
+        $body = $this->send('POST', '/api/t0/activity/generate/audio/explainer/stack', [
+            'brain_id' => $this->brain(),
+            'context_id' => (string) ($params['contextid'] ?? ''),
+            'context_type' => 'tarsus_activity',
+            'context_name' => (string) ($params['contextname'] ?? ''),
+            'context_description' => (string) ($params['contextdescription'] ?? ''),
+            'robot_id' => (string) ($params['robotid'] ?? ''),
+            'robot_name' => (string) ($params['robotname'] ?? ''),
+            'robot_description' => (string) ($params['robotdescription'] ?? ''),
+            'user_id' => (string) ($params['userid'] ?? ''),
+            'user_name' => (string) ($params['username'] ?? ''),
+            'user_language' => (string) ($params['userlanguage'] ?? 'de'),
+            'state' => 'learn',
+            'voice' => (string) ($params['voice'] ?? 'Daniel'),
+            'stack_id' => (string) ($params['stackid'] ?? ''),
+        ]);
+
+        $data = (array) ($body['activity']['audio']['data'] ?? []);
+        $bytes = (string) ($data['audioBytes'] ?? '');
+        $mimetype = strtolower((string) ($data['mimeType'] ?? 'audio/wav'));
+        if (!preg_match('~^audio/[a-z0-9.+-]+$~', $mimetype)) {
+            $mimetype = 'audio/wav';
+        }
+
+        return [
+            'audio' => preg_match('~^[A-Za-z0-9+/=\s]+$~', $bytes) ? $bytes : '',
+            'mimetype' => $mimetype,
+            'voice' => (string) ($data['assistant']['alias'] ?? ($params['voice'] ?? '')),
+            'credits' => 6,
+        ];
+    }
+
+    #[\Override]
     public function reset_conversation(string $contextid, string $userid): void {
         $this->send('DELETE', '/api/t0/activity/reset/user/widgets', [
             'brain_id' => $this->brain(),

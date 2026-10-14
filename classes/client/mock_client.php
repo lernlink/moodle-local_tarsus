@@ -149,6 +149,19 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function generate_stack_audio(array $params): array {
+        $this->maybe_fail();
+
+        // A valid, silent WAV (24 kHz, mono, 16-bit, ten samples).
+        return [
+            'audio' => 'UklGRjgAAABXQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0YRQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+            'mimetype' => 'audio/wav',
+            'voice' => (string) ($params['voice'] ?? 'Daniel'),
+            'credits' => 6,
+        ];
+    }
+
+    #[\Override]
     public function untrack_resource(array $resourceids): array {
         $this->maybe_fail();
 

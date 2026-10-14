@@ -270,6 +270,20 @@ interface client_interface {
     public function reset_conversation(string $contextid, string $userid): void;
 
     /**
+     * Read a learning unit aloud: the brain narrates one stack of slides.
+     *
+     * Expected $params keys: contextid, contextname, contextdescription,
+     * robotid, robotname, robotdescription, userid, username, userlanguage,
+     * stackid (string, from a learn item of kind 'stack') and voice (string,
+     * an assistant alias from the brain's voice list).
+     *
+     * @param array $params The narration parameters, as above.
+     * @return array Result with 'audio' (base64 bytes), 'mimetype' (e.g.
+     *               audio/wav), 'voice' (the alias actually used) and 'credits'.
+     */
+    public function generate_stack_audio(array $params): array;
+
+    /**
      * Evaluate a learner answer against the material. Phase 2.
      *
      * @param string $contextid Namespaced context.

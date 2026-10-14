@@ -117,6 +117,22 @@ if ($hassiteconfig) {
         PARAM_TEXT
     ));
 
+    $settings->add(new admin_setting_configtext(
+        'local_tarsus/voice_de',
+        get_string('voice_de', 'local_tarsus'),
+        get_string('voice_desc', 'local_tarsus'),
+        'Sara',
+        PARAM_ALPHANUMEXT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'local_tarsus/voice_en',
+        get_string('voice_en', 'local_tarsus'),
+        get_string('voice_desc', 'local_tarsus'),
+        'Daniel',
+        PARAM_ALPHANUMEXT
+    ));
+
     $settings->add(new admin_setting_configstoredfile(
         'local_tarsus/robot_avatar',
         get_string('robotavatar', 'local_tarsus'),

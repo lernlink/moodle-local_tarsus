@@ -45,6 +45,9 @@ $string['robotid'] = 'Assistenten-ID';
 $string['robotid_desc'] = 'Die Datenbank-ID dieses Assistenten auf Tarsus-Seite, wie von Tarsus mitgeteilt.';
 $string['robotdescription'] = 'Beschreibung des Assistenten';
 $string['robotdescription_desc'] = 'Eine kurze Beschreibung des Assistenten, z. B. Rolle oder Anweisungen.';
+$string['voice_de'] = 'Stimme für Deutsch';
+$string['voice_en'] = 'Stimme für Englisch';
+$string['voice_desc'] = 'Der Assistenten-Alias aus der Stimmenliste des Brains, der Lerneinheiten in dieser Sprache vorliest.';
 $string['robotavatar'] = 'Avatar des Assistenten';
 $string['robotavatar_desc'] = 'Das Bild neben den Antworten des Assistenten im Chat. Quadratische Bilder eignen sich am besten.';
 
