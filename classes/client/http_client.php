@@ -608,7 +608,8 @@ return [
                     'kind' => 'text',
                     'title' => $title,
                     'text' => $text,
-                    'image' => self::image_data_uri((string) ($image['imageBytes'] ?? '')),
+                    'image' => self::image_source(
+                        (string) ($image['imageBytes'] ?? ($image['url'] ?? ($image['imageUrl'] ?? '')))),
                     'imageposition' => strtolower((string) ($image['imagePosition'] ?? ($data['imagePosition'] ?? 'right'))) === 'left'
                         ? 'left' : 'right',
                 ];
@@ -657,13 +658,21 @@ return [
     }
 
     /**
-     * Accept an illustration only as a base64 image data URI.
+     * Accept an illustration as a base64 image data URI (the generated
+     * flowcharts) or an https image URL (the animated GIFs the brain picks
+     * from a GIF service when the teacher allows them, per Tarsus).
      *
-     * @param string $value The image bytes field.
-     * @return string The data URI, or '' when it is anything else.
+     * @param string $value The image bytes or URL field.
+     * @return string The source for an <img>, or '' when it is anything else.
      */
-    private static function image_data_uri(string $value): string {
-        return preg_match('~^data:image/(svg\+xml|png|jpeg|gif|webp);base64,[A-Za-z0-9+/=\s]+$~', $value) ? $value : '';
+    private static function image_source(string $value): string {
+        if (preg_match('~^data:image/(svg\+xml|png|jpeg|gif|webp);base64,[A-Za-z0-9+/=\s]+$~', $value)) {
+            return $value;
+        }
+        if (preg_match('~^https://[^\s"\'<>]+$~', $value)) {
+            return $value;
+        }
+        return '';
     }
 
     #[\Override]
