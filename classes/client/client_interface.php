@@ -103,6 +103,14 @@ interface client_interface {
     public function list_brains(): array;
 
     /**
+     * List the voices the brain can read aloud with.
+     *
+     * @return array<int, array{alias: string, country: string, gender: string}>
+     *               e.g. {alias: 'Sara', country: 'de-DE', gender: 'female'}.
+     */
+    public function list_voices(): array;
+
+    /**
      * Ask the activity chat (t0 surface) and return the assistant's answer.
      *
      * This is a conversation: the brain keeps dialogue memory per

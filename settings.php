@@ -117,20 +117,36 @@ if ($hassiteconfig) {
         PARAM_TEXT
     ));
 
-    $settings->add(new admin_setting_configtext(
-        'local_tarsus/voice_de',
-        get_string('voice_de', 'local_tarsus'),
-        get_string('voice_desc', 'local_tarsus'),
-        'Sara',
-        PARAM_ALPHANUMEXT
+    $settings->add(new admin_setting_configselect(
+        'local_tarsus/voice_mode',
+        get_string('voice_mode', 'local_tarsus'),
+        get_string('voice_mode_desc', 'local_tarsus'),
+        \local_tarsus\voices::MODE_AUTO,
+        [
+            \local_tarsus\voices::MODE_AUTO => get_string('voice_mode_auto', 'local_tarsus'),
+            \local_tarsus\voices::MODE_FIXED => get_string('voice_mode_fixed', 'local_tarsus'),
+        ]
     ));
 
-    $settings->add(new admin_setting_configtext(
-        'local_tarsus/voice_en',
-        get_string('voice_en', 'local_tarsus'),
+    // The voice list comes from the brain (cached for a day); only the
+    // settings page itself needs it, not every admin tree build.
+    $voiceoptions = [];
+    if ($ADMIN->fulltree) {
+        $voiceoptions = \local_tarsus\voices::options();
+    }
+    $currentvoice = (string) get_config('local_tarsus', 'voice');
+    if ($currentvoice !== '' && !isset($voiceoptions[$currentvoice])) {
+        $voiceoptions = [$currentvoice => $currentvoice] + $voiceoptions;
+    }
+    if ($voiceoptions === []) {
+        $voiceoptions = [\local_tarsus\voices::DEFAULT_VOICE => \local_tarsus\voices::DEFAULT_VOICE];
+    }
+    $settings->add(new admin_setting_configselect(
+        'local_tarsus/voice',
+        get_string('voice', 'local_tarsus'),
         get_string('voice_desc', 'local_tarsus'),
-        'Daniel',
-        PARAM_ALPHANUMEXT
+        \local_tarsus\voices::DEFAULT_VOICE,
+        $voiceoptions
     ));
 
     $settings->add(new admin_setting_configstoredfile(

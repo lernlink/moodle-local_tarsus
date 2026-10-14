@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026101407;
+$plugin->version   = 2026101500;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.12.0 (Audio explainer for learning units)';
+$plugin->release   = '1.12.1 (Voice mode and voice list)';

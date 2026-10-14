@@ -316,6 +316,25 @@ class http_client implements client_interface {
     }
 
     #[\Override]
+    public function list_voices(): array {
+        $body = $this->send('GET', 'awareness/list/clone-voices', ['brain_id' => $this->brain()]);
+
+        $voices = [];
+        foreach (($body['assistance']['voices'] ?? []) as $entry) {
+            if (!is_array($entry) || empty($entry['assistant'])) {
+                continue;
+            }
+            $voices[] = [
+                'alias' => (string) $entry['assistant'],
+                'country' => (string) ($entry['country'] ?? ''),
+                'gender' => strtolower((string) ($entry['gender'] ?? '')),
+            ];
+        }
+
+        return $voices;
+    }
+
+    #[\Override]
     public function generate_widgets(array $params): array {
         // The field vocabulary follows the Tarsus developer's instructions:
         // context_type is a constant, state stays 'ask', default_robot stays

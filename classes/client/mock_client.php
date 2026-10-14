@@ -212,6 +212,19 @@ class mock_client implements client_interface {
     }
 
     #[\Override]
+    public function list_voices(): array {
+        $this->maybe_fail();
+
+        return [
+            ['alias' => 'Sara', 'country' => 'de-DE', 'gender' => 'female'],
+            ['alias' => 'Philip', 'country' => 'de-DE', 'gender' => 'male'],
+            ['alias' => 'Abigail', 'country' => 'en-US', 'gender' => 'female'],
+            ['alias' => 'Daniel', 'country' => 'en-US', 'gender' => 'male'],
+            ['alias' => 'Maria', 'country' => 'fr-FR', 'gender' => 'female'],
+        ];
+    }
+
+    #[\Override]
     public function list_brains(): array {
         $this->maybe_fail();
 

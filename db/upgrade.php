@@ -61,5 +61,14 @@ function xmldb_local_tarsus_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2026073102, 'local', 'tarsus');
     }
 
+    if ($oldversion < 2026101500) {
+        // The per-language voice fields gave way to a voice mode plus one
+        // voice picked from the brain's list.
+        unset_config('voice_de', 'local_tarsus');
+        unset_config('voice_en', 'local_tarsus');
+
+        upgrade_plugin_savepoint(true, 2026101500, 'local', 'tarsus');
+    }
+
     return true;
 }
