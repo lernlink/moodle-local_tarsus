@@ -265,7 +265,9 @@ class mock_client implements client_interface {
             'answer' => 'Mock chat answer for: ' . (string) ($params['query'] ?? '')
                 . ' [scope: ' . $scope . ']'
                 . ' [style: ' . (int) ($params['conversationstyle'] ?? 0)
-                . ', dqr: ' . (int) ($params['dqr'] ?? 0) . ']',
+                . ', dqr: ' . (int) ($params['dqr'] ?? 0) . ']'
+                . (trim((string) ($params['replytowidget'] ?? '')) !== ''
+                    ? ' [reply: ' . trim((string) $params['replytowidget']) . ']' : ''),
             // Informational widgets (e.g. the welcome) are relayed as-is;
             // when and how often they appear is Tarsus's decision.
             'messages' => [['title' => 'Mock activity', 'text' => '**Mock welcome** to the activity chat!']],

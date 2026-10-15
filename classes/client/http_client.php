@@ -374,6 +374,12 @@ class http_client implements client_interface {
             // An unset domain is omitted rather than sent empty.
             $fields['industry'] = $industry;
         }
+        $replyto = trim((string) ($params['replytowidget'] ?? ''));
+        if ($replyto !== '') {
+            // "Dazu fragen": anchor the question on this widget rather than
+            // on the conversation's tail (verified live with a slide id).
+            $fields['reply_to_widget'] = $replyto;
+        }
 
         $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
 
