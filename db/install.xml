@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/tarsus/db" VERSION="20260625" COMMENT="local_tarsus foundation tables"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="local_tarsus_index" COMMENT="Local index map: a Moodle resource's status relative to the shared brain (source of truth for indexation status).">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="resourceid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Namespaced resource id, e.g. siteid:courseid:component:itemid."/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="component" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="itemid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="contenthash" TYPE="char" LENGTH="64" NOTNULL="false" SEQUENCE="false" COMMENT="Content hash for change detection."/>
+        <FIELD NAME="bitref" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Brain bit reference once indexed."/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="notindexed" SEQUENCE="false"/>
+        <FIELD NAME="attempts" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="nextretry" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="resourceid" UNIQUE="true" FIELDS="resourceid"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="owner" UNIQUE="false" FIELDS="component, itemid" COMMENT="Rows of one activity, read on every module event."/>
+        <INDEX NAME="contextid" UNIQUE="false" FIELDS="contextid" COMMENT="Rows of one course, read when a course is deleted."/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_tarsus_guardrail" COMMENT="Guardrail state: circuit breaker, token bucket and credit budget. Mutated under a lock by concurrent CRON workers.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false" COMMENT="Guardrail identifier, e.g. breaker, bucket, budget."/>
+        <FIELD NAME="state" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="closed" SEQUENCE="false"/>
+        <FIELD NAME="failurecount" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="opensince" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="tokens" TYPE="number" LENGTH="10" DECIMALS="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="lastrefill" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="creditsused" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="periodstart" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="name" UNIQUE="true" FIELDS="name"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_tarsus_usage" COMMENT="Local per-context usage ledger for credit/operation attribution.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="operation" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="credits" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="contextid" UNIQUE="false" FIELDS="contextid"/>
+        <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_tarsus_resource_ref" COMMENT="Reference map: which Moodle owners (activities) reference a namespaced resource_id, enabling the shared-brain untrack reference-count check.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="resourceid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="ownercomponent" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false" COMMENT="Frankenstyle component of the referencing owner, e.g. mod_tarsus."/>
+        <FIELD NAME="owneritemid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Owner item id, e.g. course module id."/>
+        <FIELD NAME="ownercontextid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="resourceid" UNIQUE="false" FIELDS="resourceid"/>
+        <INDEX NAME="owner" UNIQUE="false" FIELDS="ownercomponent, owneritemid"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>

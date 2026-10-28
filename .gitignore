@@ -1,0 +1,17 @@
+# Dependencies
+/vendor/
+/node_modules/
+composer.lock
+package-lock.json
+
+# Moodle / PHP build & test artifacts
+/build/
+*.log
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
