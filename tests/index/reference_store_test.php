@@ -38,9 +38,9 @@ final class reference_store_test extends \advanced_testcase {
         $this->resetAfterTest(true);
 
         $store = new reference_store();
-        $store->add(self::RID, 'mod_tarsuszero', 11, 100);
-        $store->add(self::RID, 'mod_tarsuszero', 22, 100);
-        $store->add(self::RID, 'mod_tarsuszero', 22, 100); // Duplicate, ignored.
+        $store->add(self::RID, 'mod_tarsus', 11, 100);
+        $store->add(self::RID, 'mod_tarsus', 22, 100);
+        $store->add(self::RID, 'mod_tarsus', 22, 100); // Duplicate, ignored.
 
         $this->assertSame(2, $store->count(self::RID));
         $this->assertTrue($store->has_references(self::RID));
@@ -56,13 +56,13 @@ final class reference_store_test extends \advanced_testcase {
         $this->resetAfterTest(true);
 
         $store = new reference_store();
-        $store->add(self::RID, 'mod_tarsuszero', 11, 100);
-        $store->add(self::RID, 'mod_tarsuszero', 22, 100);
+        $store->add(self::RID, 'mod_tarsus', 11, 100);
+        $store->add(self::RID, 'mod_tarsus', 22, 100);
 
-        $store->remove(self::RID, 'mod_tarsuszero', 11);
+        $store->remove(self::RID, 'mod_tarsus', 11);
         $this->assertFalse($store->safe_to_untrack(self::RID), 'Still referenced by owner 22.');
 
-        $store->remove(self::RID, 'mod_tarsuszero', 22);
+        $store->remove(self::RID, 'mod_tarsus', 22);
         $this->assertTrue($store->safe_to_untrack(self::RID));
     }
 
@@ -75,11 +75,11 @@ final class reference_store_test extends \advanced_testcase {
         $this->resetAfterTest(true);
 
         $store = new reference_store();
-        $store->add('rid-a', 'mod_tarsuszero', 11, 100);
-        $store->add('rid-b', 'mod_tarsuszero', 11, 100);
-        $store->add('rid-a', 'mod_tarsuszero', 22, 100);
+        $store->add('rid-a', 'mod_tarsus', 11, 100);
+        $store->add('rid-b', 'mod_tarsus', 11, 100);
+        $store->add('rid-a', 'mod_tarsus', 22, 100);
 
-        $freed = $store->remove_all_for_owner('mod_tarsuszero', 11);
+        $freed = $store->remove_all_for_owner('mod_tarsus', 11);
         sort($freed);
 
         $this->assertSame(['rid-a', 'rid-b'], $freed);

@@ -52,7 +52,7 @@ final class mock_client_test extends \advanced_testcase {
     public function test_retrieve_feed_replays_the_interleaved_feed(): void {
         $client = new mock_client();
         $result = $client->retrieve_feed([
-            'contextid' => 'site:tarsuszero:1',
+            'contextid' => 'site:tarsus:1',
             'userid' => 'pseudonym-1',
             'resourceids' => ['site:1:mod_page:2:main'],
         ]);
@@ -217,11 +217,11 @@ final class mock_client_test extends \advanced_testcase {
      */
     public function test_reset_conversation_respects_simulated_failure(): void {
         // A healthy client resets without complaint.
-        (new mock_client())->reset_conversation('site:tarsuszero:1', 'pseudonym-1');
+        (new mock_client())->reset_conversation('site:tarsus:1', 'pseudonym-1');
 
         $failing = new mock_client(true, 500);
         try {
-            $failing->reset_conversation('site:tarsuszero:1', 'pseudonym-1');
+            $failing->reset_conversation('site:tarsus:1', 'pseudonym-1');
             $this->fail('Expected transport_exception was not thrown.');
         } catch (transport_exception $e) {
             $this->assertSame(500, $e->httpstatus);
