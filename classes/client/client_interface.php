@@ -128,13 +128,22 @@ interface client_interface {
      * replytowidget (string), the id of a widget — typically a slide of a
      * learning unit — the question is about: the brain then grounds the
      * answer in that widget instead of the tail of the conversation
-     * (verified live; "Dazu fragen" in Tarsus).
+     * (verified live; "Dazu fragen" in Tarsus); interactiontype
+     * ('trainer-driven', the brain's default, or 'ai-driven'), also taken
+     * by the practice and learn generators: agent-driven, the brain answers
+     * and teaches with genericWebWidgets, self-contained HTML documents
+     * (verified live).
      *
      * @param array $params The conversation parameters, as above.
-     * @return array Result with 'answer' (markdown), 'messages' (list of
-     *               {title, text (markdown)} from informational widgets, e.g.
-     *               the welcome on a conversation's first call, titled with
-     *               the activity's name) and 'credits'.
+     * @return array Result with 'answer' (markdown; the last text answer, ''
+     *               when the answer is a web card), 'items' (every
+     *               answer-bearing widget in the brain's order: {kind:
+     *               'answer', id, text (markdown)} or {kind: 'web', id,
+     *               origin: 'ask', query, title, text, taxonomylevel, code
+     *               (the HTML document)}), 'messages' (list of {title, text
+     *               (markdown)} from informational widgets, e.g. the welcome
+     *               on a conversation's first call, titled with the
+     *               activity's name) and 'credits'.
      */
     public function generate_widgets(array $params): array;
 
@@ -193,8 +202,11 @@ interface client_interface {
      *               unit's check question}, {kind: 'complete', id, title, text}
      *               once every objective is done (progress.learnprogress reads
      *               100 from then on), {kind: 'motivation', id, title, text} —
-     *               the encouragement between two objectives — or {kind:
-     *               'message', text} — 'progress' and 'credits'.
+     *               the encouragement between two objectives — {kind:
+     *               'message', text}, or, with the agent-driven interaction
+     *               type, {kind: 'web', id, origin: 'learn', query: '',
+     *               title, text, taxonomylevel, code}: one learning step as
+     *               an HTML document — 'progress' and 'credits'.
      */
     public function generate_learn_widget(array $params): array;
 
@@ -263,7 +275,8 @@ interface client_interface {
      *               answer}, answer, answers: list of {variable, answer},
      *               table, usertable, answertable as in the generation and
      *               evaluation results}, or a learn item as returned by
-     *               {@see generate_learn_widget()} —
+     *               {@see generate_learn_widget()} (a 'web' item from the
+     *               chat carries origin 'ask' and the question) —
      *               'progress' ({earnedxp, totalxp, earnedunits, totalunits, practiceprogress}) and
      *               'credits'.
      */

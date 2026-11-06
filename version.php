@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026101600;
+$plugin->version   = 2026110600;
 $plugin->requires  = 2025041400; // Moodle 5.0+ (target platform: Moodle 5.2).
 $plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = '1.13.0 (Ask about a widget: reply_to_widget)';
+$plugin->release   = '1.14.0 (Interaction type and web cards)';

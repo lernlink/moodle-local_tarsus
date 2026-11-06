@@ -84,7 +84,7 @@ class mock_client implements client_interface {
         // A deterministic interleaved feed: the welcome, one chat exchange,
         // one answered practice question and one still open.
         return [
-            'items' => [
+            'items' => array_values(array_filter([
                 [
                     'kind' => 'message',
                     'title' => 'Mock activity',
@@ -95,6 +95,10 @@ class mock_client implements client_interface {
                     'query' => 'Mock question?',
                     'answer' => 'Mock stored answer.',
                 ],
+                // A stored web card appears only in agent-driven feeds.
+                self::agent_driven($params)
+                    ? self::web_item('mock-web-stored', 'ask', 'Mock web question?', '', self::document('Mock stored web answer'))
+                    : null,
                 [
                     'kind' => 'practice',
                     'id' => 'mock-widget-answered',
@@ -135,7 +139,7 @@ class mock_client implements client_interface {
                 ],
                 ['kind' => 'motivation', 'id' => 'mock-motivation', 'title' => '', 'text' => 'One **step** further.'],
                 ['kind' => 'complete', 'id' => 'mock-complete', 'title' => '', 'text' => 'You have **completed** the mock course.'],
-            ],
+            ])),
             'rawcount' => 7,
             'progress' => ['earnedxp' => 9.0, 'totalxp' => 15.0, 'earnedunits' => 1.0, 'totalunits' => 24.0,
                 'practiceprogress' => 60.0, 'learnprogress' => 4.17, 'progress' => 32.08],
@@ -260,19 +264,82 @@ class mock_client implements client_interface {
         // Echo the question and the allowed scope back, so tests can assert
         // both what was asked and what the brain was allowed to read.
         $scope = implode(',', array_map('strval', $params['resourceids'] ?? []));
+        $query = (string) ($params['query'] ?? '');
+
+        if (self::agent_driven($params)) {
+            // Agent-driven: the answer is an interactive web card, and there
+            // may be more than one — the mock sends two so the module shows
+            // it keeps them all.
+            return [
+                'answer' => '',
+                'items' => [
+                    self::web_item('mock-web-answer-1', 'ask', $query, '', self::document('Mock web answer for: ' . $query)),
+                    self::web_item('mock-web-answer-2', 'ask', $query, '', self::document('Mock web answer, second card')),
+                ],
+                'messages' => [['title' => 'Mock activity', 'text' => '**Mock welcome** to the activity chat!']],
+                'credits' => 6,
+            ];
+        }
+
+        $answer = 'Mock chat answer for: ' . $query
+            . ' [scope: ' . $scope . ']'
+            . ' [style: ' . (int) ($params['conversationstyle'] ?? 0)
+            . ', dqr: ' . (int) ($params['dqr'] ?? 0) . ']'
+            . (trim((string) ($params['replytowidget'] ?? '')) !== ''
+                ? ' [reply: ' . trim((string) $params['replytowidget']) . ']' : '');
 
         return [
-            'answer' => 'Mock chat answer for: ' . (string) ($params['query'] ?? '')
-                . ' [scope: ' . $scope . ']'
-                . ' [style: ' . (int) ($params['conversationstyle'] ?? 0)
-                . ', dqr: ' . (int) ($params['dqr'] ?? 0) . ']'
-                . (trim((string) ($params['replytowidget'] ?? '')) !== ''
-                    ? ' [reply: ' . trim((string) $params['replytowidget']) . ']' : ''),
+            'answer' => $answer,
+            'items' => [['kind' => 'answer', 'id' => 'mock-answer', 'text' => $answer]],
             // Informational widgets (e.g. the welcome) are relayed as-is;
             // when and how often they appear is Tarsus's decision.
             'messages' => [['title' => 'Mock activity', 'text' => '**Mock welcome** to the activity chat!']],
             'credits' => 6,
         ];
+    }
+
+    /**
+     * Whether the call asks for the agent-driven interaction type.
+     *
+     * @param array $params The call parameters.
+     * @return bool
+     */
+    private static function agent_driven(array $params): bool {
+        return (string) ($params['interactiontype'] ?? '') === 'ai-driven';
+    }
+
+    /**
+     * A 'web' item as the live client shapes a genericWebWidget.
+     *
+     * @param string $id     The widget id.
+     * @param string $origin 'ask' or 'learn'.
+     * @param string $query  The learner's question (chat cards).
+     * @param string $title  The step title (learn cards).
+     * @param string $code   The HTML document.
+     * @return array
+     */
+    private static function web_item(string $id, string $origin, string $query, string $title, string $code): array {
+        return [
+            'kind' => 'web',
+            'id' => $id,
+            'origin' => $origin,
+            'query' => $query,
+            'title' => $title,
+            'text' => $origin === 'learn' ? 'An **interactive** mock step.' : '',
+            'taxonomylevel' => $origin === 'learn' ? 'ANWENDEN' : '',
+            'code' => $code,
+        ];
+    }
+
+    /**
+     * A minimal self-contained HTML document, as the brain's web cards are.
+     *
+     * @param string $text The visible text.
+     * @return string
+     */
+    private static function document(string $text): string {
+        return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Mock</title></head>'
+            . '<body><main>' . s($text) . '</main></body></html>';
     }
 
     #[\Override]
@@ -323,7 +390,7 @@ class mock_client implements client_interface {
         $this->maybe_fail();
 
         // The objectives, then one stack — both at once, so tests see each.
-        return [
+        $result = [
             'items' => [
                 [
                     'kind' => 'objectives',
@@ -359,6 +426,13 @@ class mock_client implements client_interface {
                 'practiceprogress' => 0.0, 'learnprogress' => 10.0, 'progress' => 5.0],
             'credits' => 6,
         ];
+        if (self::agent_driven($params)) {
+            // Agent-driven: a learning step may arrive as a web card.
+            $result['items'][] = self::web_item('mock-web-step', 'learn', '', 'Mock web step',
+                self::document('Mock interactive learning step'));
+        }
+
+        return $result;
     }
 
     #[\Override]

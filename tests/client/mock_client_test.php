@@ -42,6 +42,41 @@ final class mock_client_test extends \advanced_testcase {
         $this->assertStringContainsString('What is photosynthesis?', $result['answer']);
         $this->assertStringContainsString('site:1:mod_page:2:main', $result['answer']);
         $this->assertNotEmpty($result['messages']);
+        $this->assertSame(['answer'], array_column($result['items'], 'kind'));
+        $this->assertSame($result['answer'], $result['items'][0]['text']);
+    }
+
+    /**
+     * Agent-driven, the mock answers and teaches with web cards: HTML
+     * documents, more than one per call, and one in the stored feed.
+     *
+     * @return void
+     */
+    public function test_agent_driven_calls_carry_web_items(): void {
+        $client = new mock_client();
+        $params = ['query' => 'Show me.', 'resourceids' => ['site:1:mod_page:2:main'], 'interactiontype' => 'ai-driven'];
+
+        $result = $client->generate_widgets($params);
+        $this->assertSame('', $result['answer']);
+        $this->assertSame(['web', 'web'], array_column($result['items'], 'kind'));
+        $this->assertSame('ask', $result['items'][0]['origin']);
+        $this->assertSame('Show me.', $result['items'][0]['query']);
+        $this->assertStringStartsWith('<!DOCTYPE html>', $result['items'][0]['code']);
+
+        $learn = $client->generate_learn_widget($params);
+        $web = end($learn['items']);
+        $this->assertSame('web', $web['kind']);
+        $this->assertSame('learn', $web['origin']);
+        $this->assertSame('Mock web step', $web['title']);
+        $this->assertSame('ANWENDEN', $web['taxonomylevel']);
+
+        $feed = $client->retrieve_feed($params);
+        $this->assertContains('web', array_column($feed['items'], 'kind'));
+
+        // Trainer-driven (and unset) keeps the text cards.
+        unset($params['interactiontype']);
+        $this->assertNotContains('web', array_column($client->retrieve_feed($params)['items'], 'kind'));
+        $this->assertNotContains('web', array_column($client->generate_learn_widget($params)['items'], 'kind'));
     }
 
     /**

@@ -380,23 +380,33 @@ class http_client implements client_interface {
             // on the conversation's tail (verified live with a slide id).
             $fields['reply_to_widget'] = $replyto;
         }
+        self::add_interaction_type($fields, $params);
 
         $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
 
         // The response is a widget list. An answerWidget carries the answer
-        // in bit.data.answer (its bit.text merely echoes the question); the
-        // informational widgets — welcomeWidget on a conversation's first
-        // call, and whatever Tarsus adds later — carry their message in
-        // bit.text with no data.answer. Collect both rather than matching
-        // widget types by name, so new informational widgets surface instead
-        // of vanishing.
+        // in bit.data.answer (its bit.text merely echoes the question); with
+        // the agent-driven interaction type the answer is a genericWebWidget
+        // instead, a self-contained HTML document in bit.data.code (verified
+        // live; data.answer repeats it). The informational widgets —
+        // welcomeWidget on a conversation's first call, and whatever Tarsus
+        // adds later — carry their message in bit.text with no data.answer.
+        // Every answer-bearing widget is kept, in order: one call may send
+        // several, and the module shows them all.
         $answer = '';
         $messages = [];
+        $items = [];
         foreach (($body['activity']['widgets'] ?? []) as $widget) {
+            $web = self::web_item($widget);
+            if ($web !== null) {
+                $items[] = $web;
+                continue;
+            }
             $bit = $widget['bit'] ?? [];
             $answertext = (string) ($bit['data']['answer'] ?? '');
             if ($answertext !== '') {
                 $answer = $answertext;
+                $items[] = ['kind' => 'answer', 'id' => (string) ($widget['_id'] ?? ''), 'text' => $answertext];
                 continue;
             }
             $text = (string) ($bit['text'] ?? '');
@@ -409,6 +419,7 @@ class http_client implements client_interface {
         return [
             'answer' => $answer,
             'messages' => $messages,
+            'items' => $items,
             // The response carries no cost figure; spec §6 prices a grounded
             // answer at ~6 credits.
             'credits' => 6,
@@ -455,6 +466,7 @@ class http_client implements client_interface {
             // An unset domain is omitted rather than sent empty.
             $fields['industry'] = $industry;
         }
+        self::add_interaction_type($fields, $params);
 
         try {
             $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
@@ -553,6 +565,7 @@ class http_client implements client_interface {
         if ($industry !== '') {
             $fields['industry'] = $industry;
         }
+        self::add_interaction_type($fields, $params);
 
         try {
             $body = $this->send('POST', '/api/t0/activity/generate/next/widgets', $fields);
@@ -639,6 +652,10 @@ return [
      * @return array|null The item ({kind: 'objectives'|'stack'|'complete'|'motivation', ...}), or null for other widgets.
      */
     private static function learn_item(array $widget): ?array {
+        $web = self::web_item($widget);
+        if ($web !== null) {
+            return $web;
+        }
         if (isset($widget['stackedWidgets']) && is_array($widget['stackedWidgets'])) {
             $slides = [];
             foreach ($widget['stackedWidgets'] as $slide) {
@@ -732,6 +749,60 @@ return [
         }
 
         return null;
+    }
+
+    /**
+     * Send the activity's interaction type when it is set.
+     *
+     * 'trainer-driven' is the brain's default (plain answer and slide
+     * widgets); 'ai-driven' lets the agent answer with genericWebWidgets.
+     * Both verified live.
+     *
+     * @param array $fields The form fields, by reference.
+     * @param array $params The call parameters.
+     * @return void
+     */
+    private static function add_interaction_type(array &$fields, array $params): void {
+        $type = trim((string) ($params['interactiontype'] ?? ''));
+        if ($type !== '') {
+            $fields['interaction_type'] = $type;
+        }
+    }
+
+    /**
+     * Shape a genericWebWidget — the agent-driven interaction type's
+     * interactive card — as a 'web' item, or null for any other widget.
+     *
+     * The widget carries a complete HTML document in data.code. From the
+     * chat it also carries the learner's question (data.question); from
+     * Build knowledge it is a learning step with a title, a text summary
+     * and a taxonomy level (data.stepId set). Verified live.
+     *
+     * @param array $widget The widget as the brain sent it.
+     * @return array|null The web item.
+     */
+    private static function web_item(array $widget): ?array {
+        $bit = (array) ($widget['bit'] ?? []);
+        if ((string) ($bit['type'] ?? '') !== 'genericWebWidget') {
+            return null;
+        }
+        $data = (array) ($bit['data'] ?? []);
+        $code = (string) ($data['code'] ?? ($data['answer'] ?? ''));
+        if (trim($code) === '') {
+            return null;
+        }
+        $learn = isset($data['stepId']) || (string) ($widget['state'] ?? '') === 'learn';
+
+        return [
+            'kind' => 'web',
+            'id' => (string) ($widget['_id'] ?? ''),
+            'origin' => $learn ? 'learn' : 'ask',
+            'query' => (string) ($data['question'] ?? ''),
+            'title' => (string) ($data['title'] ?? ($bit['title'] ?? '')),
+            'text' => (string) ($data['text'] ?? ''),
+            'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
+            'code' => $code,
+        ];
     }
 
     /**
