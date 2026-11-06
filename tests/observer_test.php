@@ -84,7 +84,7 @@ final class observer_test extends \advanced_testcase {
         $refs = new reference_store();
         $refs->add($resourceid, 'mod_page', $page->cmid, $context->id);
 
-        course_delete_module($page->cmid);
+        $this->delete_module($page);
 
         $this->assertFalse($refs->has_references($resourceid));
         $this->assertNull($repo->get($resourceid));
@@ -113,10 +113,10 @@ final class observer_test extends \advanced_testcase {
         $repo->mark_indexed($resourceid, 'mock-bit', sha1($resourceid));
         (new reference_store())->add($resourceid, 'mod_page', $page->cmid, $context->id);
 
-        course_delete_module($page->cmid);
+        $this->delete_module($page);
 
-        // Moodle 5.2 also deprecates course_delete_module() itself, so assert
-        // on the message rather than on how many notices were emitted.
+        // Older Moodle versions emit their own deprecation notices around the
+        // deletion, so assert on the message rather than on the notice count.
         $messages = array_map(
             static fn(\stdClass $entry): string => $entry->message,
             $this->getDebuggingMessages()
@@ -243,7 +243,7 @@ final class observer_test extends \advanced_testcase {
         $refs->add($resourceid, 'mod_page', $page->cmid, $context->id);
         $refs->add($resourceid, 'mod_book', 999, $context->id);
 
-        course_delete_module($page->cmid);
+        $this->delete_module($page);
 
         $this->assertTrue($refs->has_references($resourceid));
         $this->assertSame(status::INDEXED, $repo->get($resourceid)->status);
@@ -368,5 +368,20 @@ final class observer_test extends \advanced_testcase {
 
         $this->assertSame(observer::MAX_UPLOADS_PER_REQUEST, $uploaded);
         $this->assertSame(1, $deferred);
+    }
+    /**
+     * Delete a course module the way the current Moodle does it.
+     *
+     * Moodle 5.2 moved module deletion to the format actions; the older
+     * supported versions still use the global function.
+     *
+     * @param \stdClass $module A generator-made module record (course, cmid).
+     */
+    private function delete_module(\stdClass $module): void {
+        if (class_exists(\core_courseformat\local\cmactions::class)) {
+            (new \core_courseformat\local\cmactions(get_course($module->course)))->delete($module->cmid);
+        } else {
+            course_delete_module($module->cmid);
+        }
     }
 }
