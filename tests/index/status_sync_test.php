@@ -33,7 +33,7 @@ final class status_sync_test extends \advanced_testcase {
     /**
      * Build a client whose batch check answers from a fixed script.
      *
-     * @param array<string, array<string, mixed>> $report Response per resource id.
+     * @param array $report Response per resource id (resource id => response array).
      * @return mock_client
      */
     private function make_client(array $report): mock_client {
@@ -41,7 +41,7 @@ final class status_sync_test extends \advanced_testcase {
             /**
              * Constructor.
              *
-             * @param array<string, array<string, mixed>> $report Response per resource id.
+             * @param array $report Response per resource id (resource id => response array).
              */
             public function __construct(
                 /** @var array<string, array<string, mixed>> Response per resource id. */

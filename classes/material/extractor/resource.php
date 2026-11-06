@@ -84,9 +84,9 @@ class resource extends base {
      * a counter appended. Order comes from sortorder and is stable for a given
      * set of files.
      *
-     * @param \cm_info              $cm     The owning course module.
-     * @param string                $bitkey The preferred bit key.
-     * @param array<string, true>   $taken  Ids already used in this extraction.
+     * @param \cm_info $cm The owning course module.
+     * @param string $bitkey The preferred bit key.
+     * @param array $taken Ids already used in this extraction, as keys.
      * @return string A unique namespaced resource id.
      */
     private function unique_resource_id(\cm_info $cm, string $bitkey, array $taken): string {

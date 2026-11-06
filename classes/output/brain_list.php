@@ -39,8 +39,8 @@ class brain_list implements renderable, templatable {
     /**
      * Constructor.
      *
-     * @param array<int, array<string, mixed>> $brains  Brains as returned by the client.
-     * @param string                           $current The brain id this site currently uses.
+     * @param array $brains Brains as returned by the client, one associative array each.
+     * @param string $current The brain id this site currently uses.
      */
     public function __construct(
         /** @var array The brains the site may choose from, as the brain returns them */

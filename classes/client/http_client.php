@@ -1153,7 +1153,7 @@ class http_client implements client_interface {
     /**
      * Encode the question types map with string grade keys, as the API expects.
      *
-     * @param array<int, string[]> $map Difficulty grade => widget type names.
+     * @param array $map Difficulty grade => list of widget type names.
      * @return string JSON object, e.g. {"1":["singleChoiceQuestionWidget"]}.
      */
     private static function encode_question_types(array $map): string {
