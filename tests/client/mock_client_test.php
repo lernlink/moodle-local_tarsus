@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\client;
 
@@ -22,11 +22,10 @@ namespace local_tarsus\client;
  * @package    local_tarsus
  * @covers     \local_tarsus\client\mock_client
  * @covers     \local_tarsus\client\client_factory
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class mock_client_test extends \advanced_testcase {
-
     /**
      * The chat mock echoes the question and the allowed scope.
      *
@@ -92,8 +91,10 @@ final class mock_client_test extends \advanced_testcase {
             'resourceids' => ['site:1:mod_page:2:main'],
         ]);
 
-        $this->assertSame(['message', 'exchange', 'practice', 'practice', 'stack', 'motivation', 'complete'],
-            array_column($result['items'], 'kind'));
+        $this->assertSame(
+            ['message', 'exchange', 'practice', 'practice', 'stack', 'motivation', 'complete'],
+            array_column($result['items'], 'kind')
+        );
 
         [$message, $exchange, $answered, $open] = $result['items'];
         $this->assertStringContainsString('Mock welcome', $message['text']);

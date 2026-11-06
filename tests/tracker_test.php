@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus;
 
@@ -29,11 +29,10 @@ use local_tarsus\material\resolver;
  *
  * @package    local_tarsus
  * @covers     \local_tarsus\tracker
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class tracker_test extends \advanced_testcase {
-
     /** @var string A sample namespaced resource id. */
     private const RID = 'site:1:mod_resource:42';
 
@@ -234,7 +233,13 @@ final class tracker_test extends \advanced_testcase {
             }
         };
         $makematerial = fn(string $body): material => new material(
-            self::RID, bit_type::TEXT, 100, 'mod_resource', 42, 'Title', $body
+            self::RID,
+            bit_type::TEXT,
+            100,
+            'mod_resource',
+            42,
+            'Title',
+            $body
         );
 
         $repo = new repository();

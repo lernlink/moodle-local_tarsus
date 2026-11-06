@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\client;
 
@@ -25,11 +25,10 @@ namespace local_tarsus\client;
  * machine are exercised without any network I/O.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class mock_client implements client_interface {
-
     /**
      * Constructor.
      *
@@ -41,7 +40,9 @@ class mock_client implements client_interface {
      *                             (e.g. 429 / 500) for guardrail tests.
      */
     public function __construct(
+        /** @var bool Whether tracking completes asynchronously, as the real brain does */
         protected bool $async = true,
+        /** @var int A status to simulate on status checks, 0 for none */
         protected int $simulatestatus = 0
     ) {
     }
@@ -398,20 +399,25 @@ class mock_client implements client_interface {
                     'title' => 'Mock learning goals',
                     'message' => 'Build **mock** knowledge step by step.',
                     'objectives' => [
-                        ['id' => 'mock-goal-1', 'objective' => 'Name the mock basics.', 'taxonomylevel' => 'WISSEN', 'done' => false],
-                        ['id' => 'mock-goal-2', 'objective' => 'Explain the mock rules.', 'taxonomylevel' => 'VERSTEHEN', 'done' => true],
+                        ['id' => 'mock-goal-1', 'objective' => 'Name the mock basics.',
+                            'taxonomylevel' => 'WISSEN', 'done' => false],
+                        ['id' => 'mock-goal-2', 'objective' => 'Explain the mock rules.',
+                            'taxonomylevel' => 'VERSTEHEN', 'done' => true],
                     ],
                 ],
                 [
                     'kind' => 'stack',
                     'id' => 'mock-stack-1',
                     'slides' => [
-                        ['id' => 'mock-slide-1', 'kind' => 'text', 'taxonomylevel' => 'WISSEN', 'title' => 'First slide', 'text' => 'The **first** mock slide'
-                            . ' [method: ' . (string) ($params['learningmethod'] ?? '') . ', gif: ' . (int) !empty($params['gif']) . ']',
+                        ['id' => 'mock-slide-1', 'kind' => 'text', 'taxonomylevel' => 'WISSEN', 'title' => 'First slide',
+                            'text' => 'The **first** mock slide [method: ' . (string) ($params['learningmethod'] ?? '')
+                                . ', gif: ' . (int) !empty($params['gif']) . ']',
                             'image' => '', 'imageposition' => 'right'],
-                        ['id' => 'mock-slide-2', 'kind' => 'text', 'taxonomylevel' => 'VERSTEHEN', 'title' => 'Second slide', 'text' => 'The second mock slide.',
+                        ['id' => 'mock-slide-2', 'kind' => 'text', 'taxonomylevel' => 'VERSTEHEN', 'title' => 'Second slide',
+                            'text' => 'The second mock slide.',
                             'image' => 'data:image/svg+xml;base64,PHN2Zy8+', 'imageposition' => 'left'],
-                        ['id' => 'mock-learn-q', 'kind' => 'question', 'title' => '', 'text' => '', 'image' => '', 'imageposition' => 'right',
+                        ['id' => 'mock-learn-q', 'kind' => 'question', 'title' => '', 'text' => '', 'image' => '',
+                            'imageposition' => 'right',
                             'question' => [
                                 'kind' => 'practice', 'id' => 'mock-learn-q', 'type' => 'singleChoiceQuestionWidget',
                                 'question' => 'Which mock answer is right?', 'choices' => ['Alpha', 'Beta'], 'variables' => [],
@@ -428,8 +434,13 @@ class mock_client implements client_interface {
         ];
         if (self::agent_driven($params)) {
             // Agent-driven: a learning step may arrive as a web card.
-            $result['items'][] = self::web_item('mock-web-step', 'learn', '', 'Mock web step',
-                self::document('Mock interactive learning step'));
+            $result['items'][] = self::web_item(
+                'mock-web-step',
+                'learn',
+                '',
+                'Mock web step',
+                self::document('Mock interactive learning step')
+            );
         }
 
         return $result;
@@ -439,7 +450,7 @@ class mock_client implements client_interface {
     public function evaluate_practice_answer(array $params): array {
         $this->maybe_fail();
 
-        // 'Alpha' is the fixture's correct answer, whatever the widget —
+        // The answer 'Alpha' is the fixture's correct answer, whatever the widget —
         // for a rule-of-three question, every variable must say so; for a
         // spreadsheet calculation, every asked amount.
         $usertable = (array) ($params['usertable'] ?? []);
@@ -461,7 +472,9 @@ class mock_client implements client_interface {
             return [
                 'correct' => $correct,
                 'score' => $correct ? 100.0 : 50.0,
-                'feedback' => $correct ? '**Mock clarification:** the table adds up.' : '**Mock clarification:** check the marked amounts.',
+                'feedback' => $correct
+                    ? '**Mock clarification:** the table adds up.'
+                    : '**Mock clarification:** check the marked amounts.',
                 'answer' => '',
                 'choices' => [],
                 'answers' => [],
@@ -492,7 +505,9 @@ class mock_client implements client_interface {
             return [
                 'correct' => $correct,
                 'score' => $correct ? 100.0 : 50.0,
-                'feedback' => $correct ? '**Mock clarification:** all quantities right.' : '**Mock clarification:** check the highlighted quantities.',
+                'feedback' => $correct
+                    ? '**Mock clarification:** all quantities right.'
+                    : '**Mock clarification:** check the highlighted quantities.',
                 'answer' => '',
                 'choices' => [],
                 'answers' => $answers,

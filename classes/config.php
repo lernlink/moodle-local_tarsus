@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus;
 
@@ -24,11 +24,10 @@ namespace local_tarsus;
  * mid-run — e.g. during a long CRON worker — takes effect immediately.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class config {
-
     /** @var int Default outbound calls per minute. */
     public const DEFAULT_RATE_LIMIT = 60;
 
@@ -96,13 +95,22 @@ class config {
     public static function robot_avatar_url(): string {
         $context = \context_system::instance();
         $files = get_file_storage()->get_area_files(
-            $context->id, 'local_tarsus', 'robotavatar', 0, 'itemid, filepath, filename', false
+            $context->id,
+            'local_tarsus',
+            'robotavatar',
+            0,
+            'itemid, filepath, filename',
+            false
         );
 
         foreach ($files as $file) {
             return \moodle_url::make_pluginfile_url(
-                $context->id, 'local_tarsus', 'robotavatar', null,
-                $file->get_filepath(), $file->get_filename()
+                $context->id,
+                'local_tarsus',
+                'robotavatar',
+                null,
+                $file->get_filepath(),
+                $file->get_filename()
             )->out(false);
         }
 

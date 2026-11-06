@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\index;
 
@@ -21,11 +21,10 @@ namespace local_tarsus\index;
  *
  * @package    local_tarsus
  * @covers     \local_tarsus\index\reference_store
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class reference_store_test extends \advanced_testcase {
-
     /** @var string A sample namespaced resource id. */
     private const RID = 'site:1:course:7:file:99';
 
@@ -83,7 +82,7 @@ final class reference_store_test extends \advanced_testcase {
         sort($freed);
 
         $this->assertSame(['rid-a', 'rid-b'], $freed);
-        // rid-a is still referenced by owner 22; rid-b is now orphaned.
+        // Resource rid-a is still referenced by owner 22; rid-b is now orphaned.
         $this->assertSame(1, $store->count('rid-a'));
         $this->assertSame(0, $store->count('rid-b'));
     }

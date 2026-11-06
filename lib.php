@@ -8,21 +8,19 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Callbacks for local_tarsus.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
 
 /**
  * Serve the assistant avatar uploaded in the admin settings.
@@ -36,8 +34,15 @@ defined('MOODLE_INTERNAL') || die();
  * @param array          $options     Additional sending options.
  * @return bool False when the request does not match a stored file.
  */
-function local_tarsus_pluginfile($course, $cm, context $context, string $filearea,
-        array $args, bool $forcedownload, array $options = []): bool {
+function local_tarsus_pluginfile(
+    $course,
+    $cm,
+    context $context,
+    string $filearea,
+    array $args,
+    bool $forcedownload,
+    array $options = []
+): bool {
     if ($context->contextlevel !== CONTEXT_SYSTEM || $filearea !== 'robotavatar') {
         return false;
     }

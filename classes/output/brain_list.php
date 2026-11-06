@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\output;
 
@@ -29,11 +29,10 @@ use templatable;
  * be wired to a brain the organisation has retired.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class brain_list implements renderable, templatable {
-
     /** @var string A deleted brain keeps its row, renamed to deleted-<uuid>-<original id>. */
     private const DELETED_PATTERN = '/^deleted-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}-(.+)$/i';
 
@@ -44,7 +43,9 @@ class brain_list implements renderable, templatable {
      * @param string                           $current The brain id this site currently uses.
      */
     public function __construct(
+        /** @var array The brains the site may choose from, as the brain returns them */
         private array $brains,
+        /** @var string The id of the brain currently configured */
         private string $current
     ) {
     }

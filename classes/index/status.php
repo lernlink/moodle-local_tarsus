@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\index;
 
@@ -24,11 +24,10 @@ namespace local_tarsus\index;
  * plus pendingreindex, pendingdeletion and error.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class status {
-
     /** @var string Tracked locally but not yet queued. */
     public const NOT_INDEXED = 'notindexed';
 
@@ -64,7 +63,7 @@ class status {
     /** @var array<string, string[]> Allowed transitions from each status. */
     private const TRANSITIONS = [
         self::NOT_INDEXED => [self::PENDING, self::PENDING_DELETION],
-        // notindexed is the revert target when a synchronous upload fails:
+        // The notindexed state is the revert target when a synchronous upload fails:
         // with no background queue the row must never stay mid-flight.
         self::PENDING => [
             self::PENDING_CONFIRMATION,
@@ -83,7 +82,7 @@ class status {
             self::PENDING_DELETION,
         ],
         self::INDEXED => [self::PENDING_REINDEX, self::NOT_INDEXED, self::PENDING_DELETION],
-        // pending is reached mid-re-index: once the old bits are untracked the
+        // The pending state is reached mid-re-index: once the old bits are untracked the
         // brain holds nothing, which is exactly what pending means. Recording
         // it makes a failure of the following upload revert honestly.
         self::PENDING_REINDEX => [

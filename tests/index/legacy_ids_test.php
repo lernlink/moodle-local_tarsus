@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\index;
 
@@ -25,11 +25,10 @@ use local_tarsus\tracker;
  *
  * @package    local_tarsus
  * @covers     \local_tarsus\index\legacy_ids
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class legacy_ids_test extends \advanced_testcase {
-
     /** @var string A resource id from the content-addressed scheme. */
     private const LEGACY_RID = 'site1234:6:mod_resource:29:a8df9fed4573673066fa47ec5bcf7525d914ac6b';
 

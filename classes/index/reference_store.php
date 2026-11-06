@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\index;
 
@@ -26,11 +26,10 @@ namespace local_tarsus\index;
  * orphaned (spec §5, US-3).
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class reference_store {
-
     /** @var string The reference table. */
     private const TABLE = 'local_tarsus_resource_ref';
 
@@ -91,7 +90,12 @@ class reference_store {
         global $DB;
 
         $key = ['ownercomponent' => $ownercomponent, 'owneritemid' => $owneritemid];
-        $resourceids = $DB->get_fieldset_select(self::TABLE, 'resourceid', 'ownercomponent = :ownercomponent AND owneritemid = :owneritemid', $key);
+        $resourceids = $DB->get_fieldset_select(
+            self::TABLE,
+            'resourceid',
+            'ownercomponent = :ownercomponent AND owneritemid = :owneritemid',
+            $key
+        );
         $DB->delete_records(self::TABLE, $key);
 
         return array_values(array_unique($resourceids));

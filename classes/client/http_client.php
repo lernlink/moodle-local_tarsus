@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\client;
 
@@ -32,11 +32,10 @@ use local_tarsus\material\bit_type;
  * the guardrails pipeline and the retry/backoff budget stay in control.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class http_client implements client_interface {
-
     /** @var string Common prefix of every brain endpoint. */
     private const API_PREFIX = '/api/v1/brain/';
 
@@ -57,8 +56,11 @@ class http_client implements client_interface {
      * @param string $brainid Configured brain id (one per client).
      */
     public function __construct(
+        /** @var string The brain's base URL */
         protected string $baseurl,
+        /** @var string The organisation's API key */
         protected string $apikey,
+        /** @var string The brain id */
         protected string $brainid
     ) {
     }
@@ -376,7 +378,7 @@ class http_client implements client_interface {
         }
         $replyto = trim((string) ($params['replytowidget'] ?? ''));
         if ($replyto !== '') {
-            // "Dazu fragen": anchor the question on this widget rather than
+            // Ask about this ("Dazu fragen"): anchor the question on this widget rather than
             // on the conversation's tail (verified live with a slide id).
             $fields['reply_to_widget'] = $replyto;
         }
@@ -615,8 +617,8 @@ class http_client implements client_interface {
         }
         $evaluation = (array) ($data['evaluation'] ?? []);
         $answered = !empty($evaluation['evaluated']);
-return [
-    'kind' => 'practice',
+        return [
+        'kind' => 'practice',
             'id' => (string) ($widget['_id'] ?? ''),
             'type' => $type,
             'question' => (string) ($data['question'] ?? ($bit['text'] ?? '')),
@@ -690,9 +692,11 @@ return [
                     'title' => $title,
                     'text' => $text,
                     'image' => self::image_source(
-                        (string) ($image['imageBytes'] ?? ($image['url'] ?? ($image['imageUrl'] ?? '')))),
-                    'imageposition' => strtolower((string) ($image['imagePosition'] ?? ($data['imagePosition'] ?? 'right'))) === 'left'
-                        ? 'left' : 'right',
+                        (string) ($image['imageBytes'] ?? ($image['url'] ?? ($image['imageUrl'] ?? '')))
+                    ),
+                    'imageposition' => strtolower(
+                        (string) ($image['imagePosition'] ?? ($data['imagePosition'] ?? 'right'))
+                    ) === 'left' ? 'left' : 'right',
                 ];
             }
             return [
@@ -851,7 +855,7 @@ return [
             'user_id' => (string) ($params['userid'] ?? ''),
             'user_name' => (string) ($params['username'] ?? ''),
             'user_language' => (string) ($params['userlanguage'] ?? 'de'),
-            // 'learn' evaluates a learning unit's check question and earns
+            // The 'learn' operation evaluates a learning unit's check question and earns
             // learning units; 'practice' earns experience points (verified
             // live on the same question).
             'state' => (($params['state'] ?? '') === 'learn') ? 'learn' : 'practice',
@@ -977,8 +981,10 @@ return [
         if ($first === null) {
             return ['Position', 'Satz', 'Betrag'];
         }
-        $keys = array_values(array_filter(array_keys($first),
-            static fn($key) => strcasecmp((string) $key, 'clarification') !== 0));
+        $keys = array_values(array_filter(
+            array_keys($first),
+            static fn($key) => strcasecmp((string) $key, 'clarification') !== 0
+        ));
         $pick = static function (string $pattern, int $index) use ($keys): string {
             foreach ($keys as $key) {
                 if (preg_match($pattern, (string) $key)) {
@@ -1401,8 +1407,11 @@ return [
         if ($httpcode < 200 || $httpcode >= 300) {
             // The brain explains some refusals in the body; keep its start
             // (never the request, which carries the API key).
-            throw new transport_exception($httpcode, 'unexpected HTTP status calling ' . $path,
-                trim(substr((string) $response, 0, 300)));
+            throw new transport_exception(
+                $httpcode,
+                'unexpected HTTP status calling ' . $path,
+                trim(substr((string) $response, 0, 300))
+            );
         }
 
         $decoded = json_decode((string) $response, true);

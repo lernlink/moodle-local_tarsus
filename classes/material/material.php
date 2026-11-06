@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\material;
 
@@ -24,11 +24,10 @@ namespace local_tarsus\material;
  * the same fields, so they can never drift apart.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class material {
-
     /**
      * Constructor.
      *
@@ -43,14 +42,23 @@ class material {
      * @param string|null $pathnamehash Stored-file path hash, so the client can re-open the file to upload it.
      */
     public function __construct(
+        /** @var string The brain resource id */
         public readonly string $resourceid,
+        /** @var string The material type (the bit type it is tracked as) */
         public readonly string $type,
+        /** @var int The id of the context the material belongs to */
         public readonly int $contextid,
+        /** @var string The frankenstyle component owning the material */
         public readonly string $component,
+        /** @var int The course module id */
         public readonly int $cmid,
+        /** @var string The title shown to the brain */
         public readonly string $title,
+        /** @var string The text body, empty for binary files */
         public readonly string $body = '',
+        /** @var ?string The content hash of the file, null for text */
         public readonly ?string $filehash = null,
+        /** @var ?string The file's pathname hash, null for text */
         public readonly ?string $pathnamehash = null
     ) {
     }

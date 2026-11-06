@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\guardrail;
 
@@ -28,11 +28,10 @@ use local_tarsus\client\transport_exception;
  * job (nextretry / retrylimit) — this pipeline never sleeps.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class pipeline {
-
     /** @var int Consecutive transport failures that trip the breaker. */
     public const FAILURE_THRESHOLD = 5;
 
@@ -131,8 +130,10 @@ class pipeline {
 
         $row = $this->store->mutate('budget', function (\stdClass $row): void {
             $now = time();
-            if ((int) $row->periodstart === 0
-                    || $now - (int) $row->periodstart >= self::BUDGET_PERIOD) {
+            if (
+                (int) $row->periodstart === 0
+                    || $now - (int) $row->periodstart >= self::BUDGET_PERIOD
+            ) {
                 $row->creditsused = 0;
                 $row->periodstart = $now;
             }

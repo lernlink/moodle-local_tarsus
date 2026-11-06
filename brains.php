@@ -8,17 +8,17 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Admin page listing the brains reachable by the configured API key.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -47,14 +47,22 @@ if ($action === 'activate') {
 
     // Only ever point the site at a brain the API key really reports as active.
     if (!$brains->can_activate($brainid)) {
-        redirect($pageurl, get_string('brain_activate_failed', 'local_tarsus'), null,
-            \core\output\notification::NOTIFY_ERROR);
+        redirect(
+            $pageurl,
+            get_string('brain_activate_failed', 'local_tarsus'),
+            null,
+            \core\output\notification::NOTIFY_ERROR
+        );
     }
 
     set_config('brain_id', $brainid, 'local_tarsus');
 
-    redirect($pageurl, get_string('brain_activated', 'local_tarsus', s($brainid)), null,
-        \core\output\notification::NOTIFY_SUCCESS);
+    redirect(
+        $pageurl,
+        get_string('brain_activated', 'local_tarsus', s($brainid)),
+        null,
+        \core\output\notification::NOTIFY_SUCCESS
+    );
 }
 
 echo $OUTPUT->header();

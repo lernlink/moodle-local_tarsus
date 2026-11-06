@@ -2,7 +2,7 @@ name: Moodle Plugin CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'MOODLE_*']
   pull_request:
 
 permissions:
@@ -45,6 +45,12 @@ jobs:
             database: 'pgsql'
           - php: '8.3'
             moodle-branch: 'MOODLE_502_STABLE'
+            database: 'mariadb'
+          - php: '8.4'
+            moodle-branch: 'MOODLE_503_STABLE'
+            database: 'pgsql'
+          - php: '8.4'
+            moodle-branch: 'MOODLE_503_STABLE'
             database: 'mariadb'
 
     steps:

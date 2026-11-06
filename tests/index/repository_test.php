@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\index;
 
@@ -21,11 +21,10 @@ namespace local_tarsus\index;
  *
  * @package    local_tarsus
  * @covers     \local_tarsus\index\repository
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class repository_test extends \advanced_testcase {
-
     /** @var string A sample namespaced resource id. */
     private const RID = 'site:1:mod_resource:42';
 
@@ -59,7 +58,7 @@ final class repository_test extends \advanced_testcase {
         $repo->set_status(self::RID, status::PENDING);
         $this->assertSame(status::PENDING, $repo->get(self::RID)->status);
 
-        // pending -> pendingreindex is not a legal transition.
+        // The transition pending -> pendingreindex is not a legal transition.
         $this->expectException(\coding_exception::class);
         $repo->set_status(self::RID, status::PENDING_REINDEX);
     }

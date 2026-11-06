@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\material;
 
@@ -32,11 +32,10 @@ namespace local_tarsus\material;
  *   file in a resource); single-bit activities use 'main'.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class resource_id {
-
     /** @var string Default bit key for single-bit activities. */
     public const MAIN = 'main';
 
@@ -76,8 +75,10 @@ class resource_id {
         }
 
         [$sitetoken, $courseid, $component, $cmid, $bitkey] = $parts;
-        if ($sitetoken === '' || $component === ''
-                || !ctype_digit($courseid) || !ctype_digit($cmid)) {
+        if (
+            $sitetoken === '' || $component === ''
+                || !ctype_digit($courseid) || !ctype_digit($cmid)
+        ) {
             return null;
         }
 

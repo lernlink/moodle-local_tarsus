@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus;
 
@@ -39,11 +39,10 @@ use local_tarsus\material\resolver;
  * pendingdeletion, which is the durable record a later sweep acts on.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class observer {
-
     /** @var int Uploads one request may perform before deferring the rest. */
     public const MAX_UPLOADS_PER_REQUEST = 5;
 
@@ -212,7 +211,7 @@ class observer {
             try {
                 $indexer->execute_now($resourceid);
             } catch (blocked_exception | transport_exception $e) {
-                // execute_now() has already reverted the row, which for a
+                // The execute_now() call has already reverted the row, which for a
                 // failed untrack means "indexed" — true of the brain, but it
                 // hides that Moodle has moved on. Restore the content-changed
                 // status so the dashboard offers Re-index.

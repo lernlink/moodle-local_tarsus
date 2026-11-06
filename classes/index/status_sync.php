@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace local_tarsus\index;
 
@@ -33,11 +33,10 @@ use local_tarsus\guardrail\pipeline;
  * Only the local index map is written; the brain is never mutated here.
  *
  * @package    local_tarsus
- * @copyright  2026 lern.link GmbH
+ * @copyright  2026 lern.link GmbH | Vadym Nersesov <nersesov.vadim@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class status_sync {
-
     /** @var string[] Statuses worth asking the brain about.
      *
      * Rows with queued local work (pending, pendingreindex, pendingdeletion)
@@ -63,7 +62,9 @@ class status_sync {
      * @param client_interface|null $client   Tarsus client (defaults to the configured one).
      */
     public function __construct(
+        /** @var ?repository The index map repository */
         private ?repository $repo = null,
+        /** @var ?pipeline The guardrails pipeline */
         private ?pipeline $pipeline = null,
         ?client_interface $client = null
     ) {
