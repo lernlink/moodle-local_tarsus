@@ -452,37 +452,46 @@ class mock_client implements client_interface {
 
         // The answer 'Alpha' is the fixture's correct answer, whatever the widget —
         // for a rule-of-three question, every variable must say so; for a
-        // spreadsheet calculation, every asked amount.
+        // table question, the last cell of every row whose label does not
+        // start with '=' (those rows are given).
         $usertable = (array) ($params['usertable'] ?? []);
         if ($usertable !== []) {
             $correct = true;
+            $userrows = [];
             $answertable = [];
             foreach ($usertable as $row) {
-                $asked = ($row['amount'] ?? '') !== '' && strpos((string) ($row['position'] ?? ''), '=') === false;
-                $iscorrect = strcasecmp(trim((string) ($row['amount'] ?? '')), 'Alpha') === 0;
+                $values = array_map(
+                    static fn($cell): string => (string) (is_array($cell) ? ($cell['value'] ?? '') : $cell),
+                    array_values((array) ($row['cells'] ?? []))
+                );
+                $last = count($values) - 1;
+                $asked = $last > 0 && strpos($values[0], '=') === false;
+                $iscorrect = $asked && strcasecmp(trim($values[$last]), 'Alpha') === 0;
                 $correct = $correct && (!$asked || $iscorrect);
-                $answertable[] = [
-                    'position' => (string) ($row['position'] ?? ''),
-                    'rate' => (string) ($row['rate'] ?? ''),
-                    'amount' => $asked ? 'Alpha' : (string) ($row['amount'] ?? ''),
-                    'rateverdict' => 0,
-                    'amountverdict' => $asked ? ($iscorrect ? 1 : -1) : 0,
-                ];
+                $usercells = [];
+                $modelcells = [];
+                foreach ($values as $i => $value) {
+                    $judged = $asked && $i === $last;
+                    $usercells[] = ['value' => $value, 'ask' => false, 'verdict' => 0];
+                    $modelcells[] = [
+                        'value' => $judged ? 'Alpha' : $value,
+                        'ask' => false,
+                        'verdict' => $judged ? ($iscorrect ? 1 : -1) : 0,
+                    ];
+                }
+                $userrows[] = ['cells' => $usercells];
+                $answertable[] = ['cells' => $modelcells];
             }
             return [
                 'correct' => $correct,
                 'score' => $correct ? 100.0 : 50.0,
                 'feedback' => $correct
                     ? '**Mock clarification:** the table adds up.'
-                    : '**Mock clarification:** check the marked amounts.',
+                    : '**Mock clarification:** check the marked cells.',
                 'answer' => '',
                 'choices' => [],
                 'answers' => [],
-                'usertable' => array_map(static fn(array $row): array => [
-                    'position' => (string) ($row['position'] ?? ''),
-                    'rate' => (string) ($row['rate'] ?? ''),
-                    'amount' => (string) ($row['amount'] ?? ''),
-                ], $usertable),
+                'usertable' => $userrows,
                 'answertable' => $answertable,
                 'progress' => ['earnedxp' => $correct ? 1.0 : 0.5, 'totalxp' => 6.0, 'practiceprogress' => 16.67],
                 'credits' => 6,

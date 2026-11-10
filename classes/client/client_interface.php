@@ -170,11 +170,11 @@ interface client_interface {
      * @return array Result with 'widgets' (possibly empty list of {id,
      *               type, question, choices: string[], variables: string[]
      *               (the quantities a rule-of-three question asks for),
-     *               table: list of {position, rate, amount, askrate,
-     *               askamount} (the costing table of a spreadsheet
-     *               calculation, '?' marking asked cells), columns: string[]
-     *               (its three column names as the brain localised them,
-     *               to send back with the answer), taxonomylevel,
+     *               table: list of {cells: list of {value, ask, verdict}}
+     *               (the rows of a table question, '?' marking asked
+     *               cells), columns: string[] (its column names exactly as
+     *               the brain sent them, any number of them, to send back
+     *               with the answer), taxonomylevel,
      *               difficultylevel}, with correctness information
      *               stripped), 'progress' ({earnedxp, totalxp, earnedunits, totalunits,
      *               practiceprogress}) and 'credits'.
@@ -223,9 +223,9 @@ interface client_interface {
      * question — the brain then credits learning units instead of XP),
      * useranswer (string) for single-answer types, useranswers (list of
      * {variable, answer}) for a rule-of-three question, or usertable (list
-     * of {position, rate, amount}, every row of the costing table with the
-     * asked cells filled) plus columns (string[3], the names the question
-     * came with) for a spreadsheet calculation.
+     * of {cells: string[]}, every row of the table with the asked cells
+     * filled) plus columns (string[], the names the question came with)
+     * for a table question.
      *
      * @param array $params The evaluation parameters, as above.
      * @return array Result with 'correct' (bool, or null when the endpoint
@@ -235,9 +235,9 @@ interface client_interface {
      *               iscorrect, clarification}), 'answers' (list of
      *               {variable, answer, iscorrect, clarification} — the model
      *               answers of a rule-of-three question), 'usertable' and
-     *               'answertable' (the learner's and the model costing
-     *               rows, the latter with rateverdict/amountverdict 1, -1
-     *               or 0 for given cells), 'progress' ({earnedxp, totalxp, earnedunits, totalunits,
+     *               'answertable' (the learner's and the model rows as
+     *               {cells: list of {value, ask, verdict}}, the latter
+     *               with verdict 1, -1 or 0 for given cells), 'progress' ({earnedxp, totalxp, earnedunits, totalunits,
      *               practiceprogress}) and 'credits'.
      */
     public function evaluate_practice_answer(array $params): array;

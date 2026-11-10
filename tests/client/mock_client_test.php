@@ -224,7 +224,7 @@ final class mock_client_test extends \advanced_testcase {
     }
 
     /**
-     * The practice mock judges a costing table per asked cell.
+     * The practice mock judges a table question per asked cell.
      *
      * @return void
      */
@@ -235,15 +235,15 @@ final class mock_client_test extends \advanced_testcase {
             'widgetid' => 'mock-widget-4',
             'widgettype' => 'tradeCostingQuestionWidget',
             'usertable' => [
-                ['position' => '= Bezugspreis', 'rate' => '', 'amount' => '190,00 EUR'],
-                ['position' => '+ Handlungskosten', 'rate' => '20,00 %', 'amount' => 'Alpha'],
+                ['cells' => ['= Bezugspreis', '', '190,00 EUR']],
+                ['cells' => ['+ Handlungskosten', '20,00 %', 'Alpha']],
             ],
         ]);
 
         $this->assertTrue($result['correct']);
-        $this->assertSame(0, $result['answertable'][0]['amountverdict']);
-        $this->assertSame(1, $result['answertable'][1]['amountverdict']);
-        $this->assertSame('190,00 EUR', $result['usertable'][0]['amount']);
+        $this->assertSame(0, $result['answertable'][0]['cells'][2]['verdict']);
+        $this->assertSame(1, $result['answertable'][1]['cells'][2]['verdict']);
+        $this->assertSame('190,00 EUR', $result['usertable'][0]['cells'][2]['value']);
     }
 
     /**

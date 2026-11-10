@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_tarsus';
-$plugin->version   = 2026110601;
+$plugin->version   = 2026111001;
 $plugin->requires  = 2025041400; // Moodle 5.0.
 $plugin->supported = [502, 503]; // Tested on Moodle 5.2 and 5.3.
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.15.0';
+$plugin->release   = '1.16.0';

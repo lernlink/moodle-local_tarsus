@@ -120,9 +120,9 @@ class http_client implements client_interface {
         // (welcome and friends) a 'message'.
         $items = [];
         foreach (($body['activity']['widgets'] ?? []) as $widget) {
-            $learn = self::learn_item($widget);
-            if ($learn !== null) {
-                $items[] = $learn;
+            $learn = self::learn_items($widget);
+            if ($learn) {
+                array_push($items, ...$learn);
                 continue;
             }
             $bit = $widget['bit'] ?? [];
@@ -510,8 +510,8 @@ class http_client implements client_interface {
                 // A rule-of-three question asks for named quantities; the
                 // model answers arrive alongside and stay server-side.
                 'variables' => self::variables_of($data),
-                // A spreadsheet calculation asks for the '?' cells of a
-                // costing table; the answer table stays server-side.
+                // A table question asks for the '?' cells of a table the
+                // brain lays out; the answer table stays server-side.
                 'table' => self::question_table($data),
                 'columns' => self::table_columns((array) ($data['questionTable'] ?? [])),
                 'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
@@ -580,16 +580,16 @@ class http_client implements client_interface {
 
         $items = [];
         foreach (($body['activity']['widgets'] ?? []) as $widget) {
-            $item = self::learn_item($widget);
-            if ($item === null) {
-                // Anything else with a text is a plain message, such as
-                // the step-transition note between two objectives.
-                $text = (string) ($widget['bit']['text'] ?? '');
-                $item = $text !== ''
-                    ? ['kind' => 'message', 'title' => (string) ($widget['bit']['title'] ?? ''), 'text' => $text] : null;
+            $learn = self::learn_items($widget);
+            if ($learn) {
+                array_push($items, ...$learn);
+                continue;
             }
-            if ($item !== null) {
-                $items[] = $item;
+            // Anything else with a text is a plain message, such as the
+            // step-transition note between two objectives.
+            $text = (string) ($widget['bit']['text'] ?? '');
+            if ($text !== '') {
+                $items[] = ['kind' => 'message', 'title' => (string) ($widget['bit']['title'] ?? ''), 'text' => $text];
             }
         }
 
@@ -625,7 +625,7 @@ class http_client implements client_interface {
             'choices' => $choices,
             'variables' => self::variables_of($data),
             'table' => self::question_table($data),
-            'columns' => self::table_columns((array) ($data['questionTable'] ?? [])),
+            'columns' => self::model_columns($data),
             'taxonomylevel' => (string) ($data['taxonomyLevel'] ?? ''),
             'difficultylevel' => (int) ($data['difficultyLevel'] ?? 0),
             'answered' => $answered,
@@ -636,9 +636,52 @@ class http_client implements client_interface {
             'useranswers' => $answered ? self::variable_answers($evaluation['userVariables'] ?? []) : [],
             'answer' => $answered ? self::choice_text($evaluation['answer'] ?? ($data['answer'] ?? '')) : '',
             'answers' => $answered ? self::variable_verdicts($data) : [],
-            'usertable' => $answered ? self::table_rows($evaluation['userTable'] ?? []) : [],
+            'usertable' => $answered ? self::user_table($data) : [],
             'answertable' => $answered ? self::table_verdicts($data) : [],
         ];
+    }
+
+    /**
+     * Read one learn-mode widget as feed items.
+     *
+     * Usually one widget is one item. The agent-driven interaction type is
+     * the exception: since November 2026 the brain wraps each interactive
+     * learning step in a stack ({stackId, stackedWidgets: [genericWebWidget]})
+     * instead of sending it top-level (verified live). Such slides leave the
+     * stack and become 'web' items of their own, in order; the text and
+     * question slides around them stay together as stacks.
+     *
+     * @param array $widget One element of the widgets list.
+     * @return array[] The items; empty when the widget is not a learn-mode one.
+     */
+    private static function learn_items(array $widget): array {
+        $slides = $widget['stackedWidgets'] ?? null;
+        if (is_array($slides)) {
+            $items = [];
+            $pending = [];
+            $flush = static function () use (&$items, &$pending, $widget): void {
+                if ($pending) {
+                    $items[] = self::learn_item(['stackedWidgets' => $pending] + $widget);
+                    $pending = [];
+                }
+            };
+            foreach ($slides as $slide) {
+                $web = is_array($slide) ? self::web_item($slide) : null;
+                if ($web === null) {
+                    $pending[] = $slide;
+                    continue;
+                }
+                $flush();
+                $items[] = $web;
+            }
+            if ($items) {
+                $flush();
+                return $items;
+            }
+        }
+
+        $item = self::learn_item($widget);
+        return $item === null ? [] : [$item];
     }
 
     /**
@@ -874,21 +917,25 @@ class http_client implements client_interface {
                 self::variable_answers($params['useranswers'])
             ));
         } else if (!empty($params['usertable'])) {
-            // A spreadsheet calculation is answered as the whole table, the
-            // given cells echoed and the '?' cells filled (verified live).
-            // The column names are localised by the brain per user language
-            // (Position/Satz/Betrag, Position/Rate/Amount, ...), so the
-            // names the question came with travel back with the answer.
+            // A table question is answered as the whole table, the given
+            // cells echoed and the '?' cells filled (verified live). The
+            // column names are the brain's own, so the names the question
+            // came with travel back with the answer.
             $columns = array_values(array_map('strval', (array) ($params['columns'] ?? [])));
-            if (count($columns) !== 3) {
-                $columns = ['Position', 'Satz', 'Betrag'];
+            $rows = [];
+            foreach ((array) $params['usertable'] as $row) {
+                $cells = array_values((array) ($row['cells'] ?? []));
+                if ($columns === [] || count($cells) !== count($columns)) {
+                    throw new \coding_exception('The answered table does not match its columns.');
+                }
+                $entry = [];
+                foreach ($columns as $i => $column) {
+                    $cell = $cells[$i];
+                    $entry[$column] = trim((string) (is_array($cell) ? ($cell['value'] ?? '') : $cell));
+                }
+                $rows[] = $entry;
             }
-            $fields['user_answers'] = json_encode(array_map(
-                static fn(array $row): array => [
-                    $columns[0] => $row['position'], $columns[1] => $row['rate'], $columns[2] => $row['amount'],
-                ],
-                self::table_rows($params['usertable'])
-            ));
+            $fields['user_answers'] = json_encode($rows);
         }
 
         $body = $this->send('POST', $paths[$type], $fields);
@@ -936,7 +983,7 @@ class http_client implements client_interface {
             'answer' => self::choice_text($answer),
             'choices' => $choices,
             'answers' => self::variable_verdicts($data),
-            'usertable' => self::table_rows(((array) ($data['evaluation'] ?? []))['userTable'] ?? []),
+            'usertable' => self::user_table($data),
             'answertable' => self::table_verdicts($data),
             'progress' => self::extract_progress((array) ($body['activity'] ?? []), $data),
             'credits' => 6,
@@ -944,109 +991,125 @@ class http_client implements client_interface {
     }
 
     /**
-     * The question table of a spreadsheet calculation, '?' marking the
-     * cells to answer.
+     * The question table of a table question, '?' marking the cells to
+     * answer.
+     *
+     * The brain decides the table: any number of columns under any names
+     * (verified live: the costing Position/Satz/Betrag as well as
+     * two-column tables such as Himmelskörper/Einordnung). Rows are read
+     * against {@see table_columns()}, so nothing is tied to fixed columns.
      *
      * @param array $data The widget's bit.data.
-     * @return array<int, array{position: string, rate: string, amount: string, askrate: bool, askamount: bool}>
+     * @return array<int, array{cells: array<int, array{value: string, ask: bool, verdict: int}>}>
      */
     private static function question_table(array $data): array {
-        $rows = [];
-        foreach (self::table_rows($data['questionTable'] ?? []) as $row) {
-            $row['askrate'] = $row['rate'] === '?';
-            $row['askamount'] = $row['amount'] === '?';
-            $rows[] = $row;
-        }
-        return $rows;
+        $entries = (array) ($data['questionTable'] ?? []);
+        return self::table_rows($entries, self::table_columns($entries));
     }
 
     /**
-     * The column names of an API costing table: position, rate, amount.
+     * The column names of an API table, in the order the brain sent them.
      *
-     * The brain localises them per user language (Position/Satz/Betrag,
-     * Position/Rate/Amount, ...); known names are matched, anything else
-     * falls back to column order.
+     * Every key of every row counts, so a column missing from the first
+     * row is not lost. The per-row 'clarification' of an answer table is
+     * not a column.
      *
      * @param array $rows The API rows.
-     * @return string[] Exactly three names, defaults when the table is empty.
+     * @return string[] The column names; empty for an empty table.
      */
     private static function table_columns(array $rows): array {
-        $first = null;
+        $columns = [];
         foreach ($rows as $row) {
-            if (is_array($row)) {
-                $first = $row;
-                break;
+            if (!is_array($row)) {
+                continue;
             }
-        }
-        if ($first === null) {
-            return ['Position', 'Satz', 'Betrag'];
-        }
-        $keys = array_values(array_filter(
-            array_keys($first),
-            static fn($key) => strcasecmp((string) $key, 'clarification') !== 0
-        ));
-        $pick = static function (string $pattern, int $index) use ($keys): string {
-            foreach ($keys as $key) {
-                if (preg_match($pattern, (string) $key)) {
-                    return (string) $key;
+            foreach (array_keys($row) as $key) {
+                $key = (string) $key;
+                if ($key !== '' && strcasecmp($key, 'clarification') !== 0 && !in_array($key, $columns, true)) {
+                    $columns[] = $key;
                 }
             }
-            return (string) ($keys[$index] ?? '');
-        };
-        return [
-            $pick('/^position$/i', 0),
-            $pick('/^(rate|satz|prozentsatz|taux|tasa|tasso)$/i', 1),
-            $pick('/^(amount|betrag|montant|importe|importo)$/i', 2),
-        ];
+        }
+        return $columns;
     }
 
     /**
-     * Normalise costing table rows from either side of the wire.
+     * Read API table rows as cells aligned with the given columns.
      *
-     * @param mixed $entries Raw rows: API rows in any column language, or ours (position/rate/amount).
-     * @return array<int, array{position: string, rate: string, amount: string}>
+     * @param mixed    $entries The API rows, each an object keyed by column name.
+     * @param string[] $columns The column names, in order.
+     * @param array    $mask    The evaluation mask rows (1 correct, -1 wrong, 0 given), if any.
+     * @return array<int, array{cells: array<int, array{value: string, ask: bool, verdict: int}>}>
      */
-    private static function table_rows($entries): array {
+    private static function table_rows($entries, array $columns, array $mask = []): array {
         $entries = array_values(array_filter((array) $entries, 'is_array'));
-        [$poskey, $ratekey, $amountkey] = self::table_columns($entries);
+        $mask = array_values(array_filter($mask, 'is_array'));
         $rows = [];
-        foreach ($entries as $entry) {
-            $position = trim((string) ($entry['position'] ?? ($entry[$poskey] ?? '')));
-            if ($position === '') {
-                continue;
+        foreach ($entries as $i => $entry) {
+            $cells = [];
+            foreach ($columns as $column) {
+                $value = $entry[$column] ?? '';
+                $value = is_scalar($value) ? trim((string) $value) : '';
+                $cells[] = [
+                    'value' => $value,
+                    'ask' => $value === '?',
+                    'verdict' => max(-1, min(1, (int) ($mask[$i][$column] ?? 0))),
+                ];
             }
-            $rows[] = [
-                'position' => $position,
-                'rate' => trim((string) ($entry['rate'] ?? ($entry[$ratekey] ?? ''))),
-                'amount' => trim((string) ($entry['amount'] ?? ($entry[$amountkey] ?? ''))),
-            ];
+            $rows[] = ['cells' => $cells];
         }
         return $rows;
     }
 
     /**
-     * The model table of a spreadsheet calculation with per-cell verdicts.
-     *
-     * Verified live: after evaluation, data.evaluation carries answerTable
-     * (the model rows) and evaluationMask — one {Position, Satz, Betrag}
-     * per row, 1 for a correct cell, -1 for a wrong one, 0 for a given one.
+     * The learner's table as the brain stored it with the evaluation.
      *
      * @param array $data The widget's bit.data.
-     * @return array<int, array{position: string, rate: string, amount: string, rateverdict: int, amountverdict: int}>
+     * @return array<int, array{cells: array<int, array{value: string, ask: bool, verdict: int}>}>
+     */
+    private static function user_table(array $data): array {
+        $evaluation = (array) ($data['evaluation'] ?? []);
+        return self::table_rows($evaluation['userTable'] ?? [], self::model_columns($data));
+    }
+
+    /**
+     * The columns of an evaluated table question: those of the question.
+     *
+     * @param array $data The widget's bit.data.
+     * @return string[] The column names.
+     */
+    private static function model_columns(array $data): array {
+        $evaluation = (array) ($data['evaluation'] ?? []);
+        $tables = [
+            $data['questionTable'] ?? [],
+            $evaluation['questionTable'] ?? [],
+            $evaluation['answerTable'] ?? [],
+            $data['answerTable'] ?? [],
+        ];
+        foreach ($tables as $rows) {
+            $columns = self::table_columns((array) $rows);
+            if ($columns !== []) {
+                return $columns;
+            }
+        }
+        return [];
+    }
+
+    /**
+     * The model table of a table question with per-cell verdicts.
+     *
+     * Verified live: after evaluation, data.evaluation carries answerTable
+     * (the model rows) and evaluationMask — one object per row keyed by the
+     * table's own column names, 1 for a correct cell, -1 for a wrong one,
+     * 0 for a given one.
+     *
+     * @param array $data The widget's bit.data.
+     * @return array<int, array{cells: array<int, array{value: string, ask: bool, verdict: int}>}>
      */
     private static function table_verdicts(array $data): array {
         $evaluation = (array) ($data['evaluation'] ?? []);
-        $mask = array_values(array_filter((array) ($evaluation['evaluationMask'] ?? []), 'is_array'));
         $modelrows = (array) ($evaluation['answerTable'] ?? ($data['answerTable'] ?? []));
-        [, $ratekey, $amountkey] = self::table_columns($mask !== [] ? $mask : $modelrows);
-        $rows = [];
-        foreach (self::table_rows($modelrows) as $i => $row) {
-            $cell = $mask[$i] ?? [];
-            $row['rateverdict'] = max(-1, min(1, (int) ($cell[$ratekey] ?? 0)));
-            $row['amountverdict'] = max(-1, min(1, (int) ($cell[$amountkey] ?? 0)));
-            $rows[] = $row;
-        }
-        return $rows;
+        return self::table_rows($modelrows, self::model_columns($data), (array) ($evaluation['evaluationMask'] ?? []));
     }
 
     /**
